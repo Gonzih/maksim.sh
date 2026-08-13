@@ -64,7 +64,7 @@ body::after {
   position: relative;
   z-index: 3;
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: 1fr auto;
   width: 100%;
   min-height: 100vh;
   min-height: 100svh;
@@ -72,49 +72,10 @@ body::after {
   pointer-events: none;
 }
 
-.topbar,
 .footer {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-}
-
-.domain,
-.contact {
-  pointer-events: auto;
-}
-
-.domain {
-  color: #f3f4f1;
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.02em;
-  text-decoration: none;
-}
-
-.domain span {
-  color: #c6ff63;
-}
-
-.mode {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: rgba(232, 237, 234, 0.6);
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.live-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #c6ff63;
-  box-shadow: 0 0 14px rgba(198, 255, 99, 0.85);
-  animation: breathe 1.8s ease-in-out infinite;
+  align-items: flex-end;
+  justify-content: flex-start;
 }
 
 .hero {
@@ -146,15 +107,12 @@ body::after {
 
 .role {
   margin: clamp(22px, 3.4vh, 42px) 0 0 0.55vw;
-  color: #c6ff63;
-  font-size: clamp(15px, 1.25vw, 20px);
-  font-weight: 520;
-  letter-spacing: 0.14em;
+  color: rgba(198, 255, 99, 0.9);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: clamp(17px, 1.35vw, 22px);
+  font-weight: 300;
+  letter-spacing: -0.018em;
   text-transform: lowercase;
-}
-
-.footer {
-  align-items: flex-end;
 }
 
 .contact {
@@ -199,26 +157,9 @@ body::after {
   transform: translate(4px, -4px);
 }
 
-.contact:focus-visible,
-.domain:focus-visible {
+.contact:focus-visible {
   outline: 1px solid #62e8ff;
   outline-offset: 8px;
-}
-
-.telemetry {
-  display: flex;
-  gap: 12px;
-  color: rgba(232, 237, 234, 0.46);
-  font-size: 9px;
-  font-weight: 650;
-  letter-spacing: 0.17em;
-  text-transform: uppercase;
-}
-
-.telemetry span + span::before {
-  margin-right: 12px;
-  color: rgba(198, 255, 99, 0.5);
-  content: "/";
 }
 
 noscript {
@@ -231,19 +172,6 @@ noscript {
   color: #f3f4f1;
   background: #050508;
   text-align: center;
-}
-
-@keyframes breathe {
-  0%,
-  100% {
-    opacity: 0.48;
-    transform: scale(0.8);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1.12);
-  }
 }
 
 @media (max-width: 720px) {
@@ -275,16 +203,9 @@ noscript {
     font-size: 18px;
   }
 
-  .telemetry span + span {
-    display: none;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .live-dot {
-    animation-duration: 4s;
-  }
-
   .contact,
   .contact::after,
   .contact .arrow {

@@ -12,8 +12,6 @@ import "./styles.css";
 
 const canvas = document.querySelector("#field");
 const context = canvas.getContext("2d", { alpha: false });
-const phaseElement = document.querySelector("#phase");
-const nodeCountElement = document.querySelector("#node-count");
 
 const TAU = Math.PI * 2;
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
@@ -47,7 +45,6 @@ let pixelRatio = 1;
 let nodes = [];
 let monogramTargets = [];
 let simulation = null;
-let currentPhase = -1;
 let resizeRequest = 0;
 let animationElapsed = 0;
 
@@ -178,7 +175,6 @@ function resize() {
   nodes = createNodes(desiredNodeCount());
   monogramTargets = sampleMonogram(nodes.length);
   buildSimulation();
-  nodeCountElement.textContent = `${nodes.length} nodes`;
 }
 
 function constellationTarget(node, elapsed) {
@@ -242,11 +238,6 @@ function updatePhysics(elapsed) {
   const phaseProgress = phasePosition % 1;
   const transition = easeCubicInOut(clamp((phaseProgress - 0.56) / 0.44));
   const targetStrength = prefersReducedMotion.matches ? 0.006 : 0.0115;
-
-  if (phaseIndex !== currentPhase) {
-    currentPhase = phaseIndex;
-    phaseElement.textContent = PHASES[phaseIndex];
-  }
 
   pointer.energy += ((pointer.active ? 1 : 0) - pointer.energy) * 0.08;
 
