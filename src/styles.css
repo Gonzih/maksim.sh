@@ -1,0 +1,66 @@
+:root {
+  color-scheme: dark;
+  background: #090b0a;
+  font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#terminal {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  background: #090b0a;
+}
+
+#terminal {
+  padding: 14px 16px;
+  outline: none;
+}
+
+.xterm,
+.xterm-screen {
+  height: 100%;
+}
+
+.xterm-viewport {
+  overflow-y: hidden !important;
+  background: #090b0a !important;
+}
+
+.xterm .xterm-screen canvas {
+  image-rendering: auto;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+noscript {
+  display: block;
+  padding: 24px;
+  color: #d7ddd8;
+}
+
+@media (max-width: 680px) {
+  #terminal {
+    padding: 7px 8px;
+  }
+}
