@@ -1,11 +1,35 @@
 use wasm_bindgen::prelude::*;
 
-const BOOT_LINES: [&str; 4] = [
-    "[wasm] rust guest instantiated",
-    "[wasm] deterministic kernels mapped",
-    "[worker] telemetry channel attached",
-    "[host] frame clock sampling",
+const WIDTH: usize = 8;
+const BLOCKS: usize = 4;
+const Q: i32 = 256;
+const FNV_OFFSET: u32 = 0x811c_9dc5;
+const FNV_PRIME: u32 = 0x0100_0193;
+
+const BOOT_LINES: [&str; 3] = [
+    "[wasm] identity.q8 mapped into linear memory",
+    "[wasm] 4 residual blocks / 8 channels / q8.8",
+    "[wasm] output head bound to homepage.tokens",
 ];
+
+const HOMEPAGE: &str = r#"Maksim Soltan
+Programmer for fun.
+
+(defmacro ❤ [&args]
+  `(update-in me [:passionate :tech] conj ~@args))
+
+❤ Go · Rust && C++ · Clojure[Script] · Scala.
+❤ Functional programming.
+❤ Linux · Vim · Git · Fish · Tmux · Xmonad.
+❤ k8s · NixOS · Embedded systems · ML.
+
+fn main(arg: &str) -> Result<()> {
+  "github" => github.com/Gonzih,
+  "blog"   => blog.gonzih.me,
+  "email"  => gonzih@gmail.com,
+  "cv"     => gonzih.notion.site/Max-Gonzih-CV-d6cb096878a24c9293f2ac8f0f6f87ee,
+  _        => Ok(()),
+}"#;
 
 #[wasm_bindgen]
 pub fn boot_line_count() -> u32 {
@@ -17,118 +41,333 @@ pub fn boot_line(index: u32) -> String {
     BOOT_LINES
         .get(index as usize)
         .copied()
-        .unwrap_or("[wasm] ready")
+        .unwrap_or("[wasm] decoder ready")
         .to_owned()
 }
 
 #[wasm_bindgen]
-pub fn guest_abi() -> String {
-    "rust/wasm32-unknown-unknown".to_owned()
+pub struct Inference {
+    tokens: Vec<String>,
+    weights: Vec<i16>,
+    biases: Vec<i16>,
+    state: [i16; WIDTH],
+    token_index: usize,
+    block: usize,
+    ticks: u32,
+    output_checksum: u32,
+    model_checksum: u32,
 }
 
 #[wasm_bindgen]
-pub struct Probe {
-    links: Vec<u32>,
-    cursor: u32,
-    state: u32,
-}
-
-#[wasm_bindgen]
-impl Probe {
+impl Inference {
     #[wasm_bindgen(constructor)]
-    pub fn new(requested_bytes: u32) -> Probe {
-        let requested_words =
-            (requested_bytes as usize / core::mem::size_of::<u32>()).clamp(16_384, 1_048_576);
-        let words = requested_words.next_power_of_two();
-
-        let mut order: Vec<u32> = (0..words as u32).collect();
+    pub fn new() -> Inference {
         let mut seed = 0x6d61_6b73_u32;
+        let mut weights = vec![0_i16; BLOCKS * WIDTH * WIDTH];
+        let mut biases = vec![0_i16; BLOCKS * WIDTH];
 
-        // Build one deterministic permutation cycle. Following it defeats
-        // sequential prefetch while keeping every load inside linear memory.
-        for index in (1..words).rev() {
-            seed = xorshift32(seed);
-            let swap_with = seed as usize % (index + 1);
-            order.swap(index, swap_with);
+        for block in 0..BLOCKS {
+            for output in 0..WIDTH {
+                for input in 0..WIDTH {
+                    seed = xorshift32(seed);
+                    let random = ((seed >> 24) as i16) - 128;
+                    let diagonal = if input == output { 72 } else { 0 };
+                    weights[weight_index(block, output, input)] =
+                        (random + diagonal).clamp(-192, 192);
+                }
+
+                seed = xorshift32(seed);
+                biases[block * WIDTH + output] = (((seed >> 25) as i16) - 64) / 2;
+            }
         }
 
-        let mut links = vec![0_u32; words];
-        for index in 0..words {
-            let current = order[index] as usize;
-            links[current] = order[(index + 1) & (words - 1)];
-        }
+        let model_checksum = weights
+            .iter()
+            .chain(biases.iter())
+            .fold(FNV_OFFSET, |hash, value| {
+                value
+                    .to_le_bytes()
+                    .iter()
+                    .fold(hash, |next, byte| fnv(next, *byte))
+            });
 
-        Probe {
-            cursor: order[0],
-            links,
-            state: seed,
+        Inference {
+            tokens: tokenize(HOMEPAGE),
+            weights,
+            biases,
+            state: [0; WIDTH],
+            token_index: 0,
+            block: 0,
+            ticks: 0,
+            output_checksum: FNV_OFFSET,
+            model_checksum,
         }
     }
 
-    pub fn scalar(&mut self, rounds: u32) -> u32 {
-        let mut state = self.state;
-
-        for step in 0..rounds {
-            state ^= step.wrapping_mul(0x9e37_79b9);
-            state = state.rotate_left(7).wrapping_mul(0x85eb_ca6b);
-            state ^= state >> 13;
-            state = state.wrapping_add(0xc2b2_ae35);
-        }
-
-        self.state = state;
-        state
+    pub fn reset(&mut self) {
+        self.state = [0; WIDTH];
+        self.token_index = 0;
+        self.block = 0;
+        self.ticks = 0;
+        self.output_checksum = FNV_OFFSET;
     }
 
-    pub fn branch(&mut self, rounds: u32) -> u32 {
-        let mut state = self.state;
-        let mut taken = 0_u32;
+    pub fn model_name(&self) -> String {
+        "identity.q8".to_owned()
+    }
 
-        for step in 0..rounds {
-            state = xorshift32(state ^ step);
-            if state & 0x8000_0000 == 0 {
-                state = state.rotate_left(11).wrapping_add(0x27d4_eb2d);
+    pub fn architecture(&self) -> String {
+        format!("{}x{} residual / q8.8", BLOCKS, WIDTH)
+    }
+
+    pub fn runtime(&self) -> String {
+        "rust / wasm32-unknown-unknown".to_owned()
+    }
+
+    pub fn token_count(&self) -> u32 {
+        self.tokens.len() as u32
+    }
+
+    pub fn model_checksum(&self) -> u32 {
+        self.model_checksum
+    }
+
+    pub fn done(&self) -> bool {
+        self.token_index >= self.tokens.len()
+    }
+
+    pub fn step(&mut self) -> InferenceFrame {
+        if self.done() {
+            return InferenceFrame {
+                block: self.block as u32,
+                tick: self.ticks,
+                token_index: self.tokens.len() as u32,
+                token_count: self.tokens.len() as u32,
+                input: self.state,
+                output: self.state,
+                contributions: vec![0; WIDTH * WIDTH],
+                emitted: String::new(),
+                energy_q8: 0,
+                dominant: 0,
+                output_checksum: self.output_checksum,
+                done: true,
+            };
+        }
+
+        let token = self.tokens[self.token_index].clone();
+        if self.block == 0 {
+            self.state = embed(&token, self.token_index as u32, self.output_checksum);
+        }
+
+        let input = self.state;
+        let mut output = [0_i16; WIDTH];
+        let mut contributions = vec![0_i16; WIDTH * WIDTH];
+
+        for output_index in 0..WIDTH {
+            let mut accumulator = self.biases[self.block * WIDTH + output_index] as i32;
+
+            for input_index in 0..WIDTH {
+                let weight = self.weights[weight_index(self.block, output_index, input_index)];
+                let contribution =
+                    ((input[input_index] as i32 * weight as i32) / Q).clamp(-511, 511);
+                contributions[output_index * WIDTH + input_index] = contribution as i16;
+                accumulator += contribution;
+            }
+
+            // A small residual path keeps the signal legible across all four blocks.
+            accumulator += input[output_index] as i32 / 2;
+            output[output_index] = squash_q8(accumulator);
+        }
+
+        let dominant = output
+            .iter()
+            .enumerate()
+            .max_by_key(|(_, value)| value.unsigned_abs())
+            .map(|(index, _)| index)
+            .unwrap_or(0);
+        let energy_q8 = output
+            .iter()
+            .map(|value| value.unsigned_abs() as u32)
+            .sum::<u32>()
+            / WIDTH as u32;
+
+        let final_block = self.block + 1 == BLOCKS;
+        let emitted = if final_block {
+            for byte in token.as_bytes() {
+                self.output_checksum = fnv(self.output_checksum, *byte);
+            }
+            self.token_index += 1;
+            token
+        } else {
+            String::new()
+        };
+
+        let frame = InferenceFrame {
+            block: self.block as u32,
+            tick: self.ticks,
+            token_index: if final_block {
+                self.token_index as u32
             } else {
-                state = state.rotate_right(9).wrapping_mul(0x1656_67b1);
-                taken = taken.wrapping_add(1);
+                self.token_index as u32 + 1
+            },
+            token_count: self.tokens.len() as u32,
+            input,
+            output,
+            contributions,
+            emitted,
+            energy_q8,
+            dominant: dominant as u32,
+            output_checksum: self.output_checksum,
+            done: final_block && self.done(),
+        };
+
+        self.state = output;
+        self.block = if final_block { 0 } else { self.block + 1 };
+        self.ticks = self.ticks.wrapping_add(1);
+        frame
+    }
+}
+
+#[wasm_bindgen]
+pub struct InferenceFrame {
+    block: u32,
+    tick: u32,
+    token_index: u32,
+    token_count: u32,
+    input: [i16; WIDTH],
+    output: [i16; WIDTH],
+    contributions: Vec<i16>,
+    emitted: String,
+    energy_q8: u32,
+    dominant: u32,
+    output_checksum: u32,
+    done: bool,
+}
+
+#[wasm_bindgen]
+impl InferenceFrame {
+    pub fn block(&self) -> u32 {
+        self.block
+    }
+
+    pub fn tick(&self) -> u32 {
+        self.tick
+    }
+
+    pub fn token_index(&self) -> u32 {
+        self.token_index
+    }
+
+    pub fn token_count(&self) -> u32 {
+        self.token_count
+    }
+
+    pub fn input(&self) -> Vec<i16> {
+        self.input.to_vec()
+    }
+
+    pub fn output(&self) -> Vec<i16> {
+        self.output.to_vec()
+    }
+
+    pub fn contributions(&self) -> Vec<i16> {
+        self.contributions.clone()
+    }
+
+    pub fn emitted(&self) -> String {
+        self.emitted.clone()
+    }
+
+    pub fn energy_q8(&self) -> u32 {
+        self.energy_q8
+    }
+
+    pub fn dominant(&self) -> u32 {
+        self.dominant
+    }
+
+    pub fn output_checksum(&self) -> u32 {
+        self.output_checksum
+    }
+
+    pub fn done(&self) -> bool {
+        self.done
+    }
+}
+
+fn weight_index(block: usize, output: usize, input: usize) -> usize {
+    block * WIDTH * WIDTH + output * WIDTH + input
+}
+
+fn embed(token: &str, position: u32, context: u32) -> [i16; WIDTH] {
+    let mut hash = token
+        .as_bytes()
+        .iter()
+        .fold(FNV_OFFSET ^ position ^ context, |next, byte| {
+            fnv(next, *byte)
+        });
+    let mut vector = [0_i16; WIDTH];
+
+    for (index, value) in vector.iter_mut().enumerate() {
+        hash = xorshift32(hash ^ (index as u32).wrapping_mul(0x9e37_79b9));
+        *value = (((hash >> 24) as i16) - 128) * 2;
+    }
+
+    vector
+}
+
+fn squash_q8(value: i32) -> i16 {
+    let clamped = value.clamp(-4096, 4096);
+    ((clamped * Q) / (Q + clamped.abs())).clamp(-255, 255) as i16
+}
+
+fn tokenize(source: &str) -> Vec<String> {
+    let mut tokens = Vec::new();
+    let mut current = String::new();
+    let mut current_class: Option<u8> = None;
+
+    let flush = |tokens: &mut Vec<String>, current: &mut String| {
+        if !current.is_empty() {
+            tokens.push(core::mem::take(current));
+        }
+    };
+
+    for character in source.chars() {
+        if character == '\n' {
+            flush(&mut tokens, &mut current);
+            current_class = None;
+            tokens.push("\n".to_owned());
+            continue;
+        }
+
+        let class = if character.is_whitespace() {
+            1
+        } else if character.is_alphanumeric() || "_:/@.-+&[]?=<>".contains(character) {
+            2
+        } else {
+            3
+        };
+
+        if class == 3 {
+            flush(&mut tokens, &mut current);
+            current_class = None;
+            tokens.push(character.to_string());
+        } else {
+            if current_class.is_some_and(|previous| previous != class) {
+                flush(&mut tokens, &mut current);
             }
+            current_class = Some(class);
+            current.push(character);
         }
-
-        self.state = state ^ taken;
-        self.state
     }
 
-    pub fn linear_scan(&mut self, passes: u32) -> u32 {
-        let mut checksum = self.state;
+    flush(&mut tokens, &mut current);
+    tokens
+}
 
-        for pass in 0..passes {
-            for (index, value) in self.links.iter().enumerate() {
-                checksum =
-                    checksum.rotate_left(5) ^ value.wrapping_add(index as u32).wrapping_add(pass);
-            }
-        }
-
-        self.state = checksum;
-        checksum
-    }
-
-    pub fn pointer_chase(&mut self, steps: u32) -> u32 {
-        let mut cursor = self.cursor as usize;
-        let mask = self.links.len() - 1;
-        let mut checksum = self.state;
-
-        for step in 0..steps {
-            cursor = self.links[cursor & mask] as usize;
-            checksum = checksum.rotate_left(3) ^ cursor as u32 ^ step;
-        }
-
-        self.cursor = cursor as u32;
-        self.state = checksum;
-        checksum
-    }
-
-    pub fn buffer_bytes(&self) -> u32 {
-        (self.links.len() * core::mem::size_of::<u32>()) as u32
-    }
+#[inline(always)]
+fn fnv(hash: u32, byte: u8) -> u32 {
+    (hash ^ byte as u32).wrapping_mul(FNV_PRIME)
 }
 
 #[inline(always)]
@@ -139,47 +378,33 @@ fn xorshift32(mut value: u32) -> u32 {
     value
 }
 
-#[cfg(all(feature = "simd", target_arch = "wasm32"))]
-#[target_feature(enable = "simd128")]
-unsafe fn simd_mix_inner(rounds: u32) -> u32 {
-    use core::arch::wasm32::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let mut lanes = i32x4(
-        0x6d61_6b73_u32 as i32,
-        0x9e37_79b9_u32 as i32,
-        0x85eb_ca6b_u32 as i32,
-        0xc2b2_ae35_u32 as i32,
-    );
-    let increment = i32x4(0x1357_9bdf, 0x2468_ace1, 0x1020_4081, 0x55aa_33cc);
-    let multiplier = i32x4(0x27d4_eb2d, 0x1656_67b1, 0x1b87_3593, 0x5bd1_e995);
+    #[test]
+    fn decoder_emits_exact_homepage() {
+        let mut model = Inference::new();
+        let mut decoded = String::new();
 
-    for step in 0..rounds {
-        lanes = i32x4_add(lanes, increment);
-        lanes = v128_xor(lanes, i32x4_shl(lanes, 5));
-        lanes = i32x4_mul(lanes, multiplier);
-        lanes = v128_xor(lanes, i32x4_splat(step as i32));
-    }
-
-    (i32x4_extract_lane::<0>(lanes) as u32)
-        ^ (i32x4_extract_lane::<1>(lanes) as u32)
-        ^ (i32x4_extract_lane::<2>(lanes) as u32)
-        ^ (i32x4_extract_lane::<3>(lanes) as u32)
-}
-
-#[cfg(feature = "simd")]
-#[wasm_bindgen]
-pub fn simd_mix(rounds: u32) -> u32 {
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        return simd_mix_inner(rounds);
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let mut value = 0x6d61_6b73_u32;
-        for step in 0..rounds {
-            value = xorshift32(value ^ step);
+        while !model.done() {
+            decoded.push_str(&model.step().emitted);
         }
-        value
+
+        assert_eq!(decoded, HOMEPAGE);
+        assert!(model.token_count() > 100);
+    }
+
+    #[test]
+    fn propagation_is_deterministic() {
+        let mut first = Inference::new();
+        let mut second = Inference::new();
+
+        for _ in 0..64 {
+            let left = first.step();
+            let right = second.step();
+            assert_eq!(left.output, right.output);
+            assert_eq!(left.contributions, right.contributions);
+        }
     }
 }

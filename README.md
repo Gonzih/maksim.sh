@@ -1,11 +1,12 @@
 # maksim.sh
 
-A terminal-native personal homepage built around a real browser/WASM probe.
+A terminal-native personal homepage presented as a live inference trace.
 
-The xterm.js surface renders live browser scheduler telemetry. Deterministic
-Rust kernels run in WebAssembly on both the main thread and a Web Worker. The
-worker streams sample records through a SharedArrayBuffer/Atomics ring when
-cross-origin isolation is available.
+The Rust/WebAssembly guest owns a deterministic four-block, eight-channel
+fixed-point propagation machine. Its Q8.8 activations and per-edge
+contributions are streamed from a Web Worker into xterm.js, while its output
+head progressively decodes the homepage content. The visualization is a tiny
+purpose-built model, not a general-purpose LLM.
 
 ## Run locally
 
@@ -21,6 +22,5 @@ npm run build
 npm run preview
 ```
 
-The probe reports raw measurements and distributions rather than a composite
-device score. Its linear-memory result is explicitly a WebAssembly logical scan,
-not a claim about physical RAM bandwidth.
+The page starts itself: after the WASM guest is ready, the terminal types and
+runs `infer identity.weights --trace` without requiring a click.

@@ -6,9 +6,7 @@
   "scripts": {
     "dev": "npm run build:wasm && vite",
     "build": "npm run build:wasm && vite build",
-    "build:wasm": "npm run build:wasm:base && npm run build:wasm:simd",
-    "build:wasm:base": "wasm-pack build rust --target web --out-dir ../src/wasm --out-name maksim_wasm --release",
-    "build:wasm:simd": "RUSTFLAGS='-C target-feature=+simd128' wasm-pack build rust --target web --out-dir ../src/wasm-simd --out-name maksim_simd --release --features simd",
+    "build:wasm": "wasm-pack build rust --target web --out-dir ../src/wasm --out-name maksim_wasm --release",
     "preview": "vite preview"
   },
   "dependencies": {
