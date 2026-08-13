@@ -9,26 +9,22 @@ const FNV_PRIME: u32 = 0x0100_0193;
 const BOOT_LINES: [&str; 3] = [
     "[wasm] identity.q8 mapped into linear memory",
     "[wasm] 4 residual blocks / 8 channels / q8.8",
-    "[wasm] output head bound to homepage.tokens",
+    "[wasm] output head bound to identity.rs.tokens",
 ];
 
-const HOMEPAGE: &str = r#"Maksim Soltan
-Programmer for fun.
+const IDENTITY_SOURCE: &str = r#"pub struct MaksimSoltan;
 
-(defmacro ❤ [&args]
-  `(update-in me [:passionate :tech] conj ~@args))
+impl MaksimSoltan {
+    pub const ROLE: &'static str = "knowledge engineer";
+    pub const ONLY_LANGUAGE: &'static str = "Rust";
 
-❤ Go · Rust && C++ · Clojure[Script] · Scala.
-❤ Functional programming.
-❤ Linux · Vim · Git · Fish · Tmux · Xmonad.
-❤ k8s · NixOS · Embedded systems · ML.
+    pub fn paradigm(&self) -> &'static str {
+        "functional programming"
+    }
 
-fn main(arg: &str) -> Result<()> {
-  "github" => github.com/Gonzih,
-  "blog"   => blog.gonzih.me,
-  "email"  => gonzih@gmail.com,
-  "cv"     => gonzih.notion.site/Max-Gonzih-CV-d6cb096878a24c9293f2ac8f0f6f87ee,
-  _        => Ok(()),
+    pub fn github(&self) -> &'static str {
+        "https://github.com/Gonzih"
+    }
 }"#;
 
 #[wasm_bindgen]
@@ -92,7 +88,7 @@ impl Inference {
             });
 
         Inference {
-            tokens: tokenize(HOMEPAGE),
+            tokens: tokenize(IDENTITY_SOURCE),
             weights,
             biases,
             state: [0; WIDTH],
@@ -383,7 +379,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn decoder_emits_exact_homepage() {
+    fn decoder_emits_exact_identity() {
         let mut model = Inference::new();
         let mut decoded = String::new();
 
@@ -391,7 +387,7 @@ mod tests {
             decoded.push_str(&model.step().emitted);
         }
 
-        assert_eq!(decoded, HOMEPAGE);
+        assert_eq!(decoded, IDENTITY_SOURCE);
         assert!(model.token_count() > 100);
     }
 

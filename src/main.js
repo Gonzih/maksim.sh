@@ -1,4 +1,5 @@
 import { FitAddon } from "@xterm/addon-fit";
+import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import "./styles.css";
@@ -56,6 +57,10 @@ const terminal = new Terminal({
 
 const fitAddon = new FitAddon();
 terminal.loadAddon(fitAddon);
+terminal.loadAddon(new WebLinksAddon((event, uri) => {
+  event.preventDefault();
+  window.open(uri, "_blank", "noopener,noreferrer");
+}));
 terminal.open(terminalElement);
 
 const state = {
@@ -74,6 +79,9 @@ const state = {
   initMs: null,
   memoryBytes: null,
   elapsedMs: null,
+  activationHistory: [],
+  blockEnergy: [0, 0, 0, 0],
+  emittedTokens: [],
   model: {
     name: "identity.q8",
     architecture: "4x8 residual / q8.8",
@@ -150,12 +158,6 @@ function labelValue(label, value, color = "white") {
   return `${paint("gray", label.padEnd(12, " "))}${paint(color, value)}`;
 }
 
-function formatBytes(value) {
-  if (value === null || value === undefined) return "n/a";
-  if (value >= 2 ** 20) return `${(value / 2 ** 20).toFixed(2)} MiB`;
-  return `${(value / 2 ** 10).toFixed(1)} KiB`;
-}
-
 function formatHash(value) {
   return `0x${(value >>> 0).toString(16).padStart(8, "0")}`;
 }
@@ -165,25 +167,55 @@ function signedQ8(value) {
   return `${value >= 0 ? "+" : ""}${normalized}`.padStart(6, " ");
 }
 
-function node(value) {
-  const magnitude = Math.abs(value) / 256;
-  const glyph = magnitude >= 0.58 ? "●" : magnitude >= 0.22 ? "◉" : "○";
-  return paint(value >= 0 ? "green" : "cyan", glyph);
+function activationColor(level, negative = false) {
+  if (negative) return level > 0.72 ? "red" : level > 0.4 ? "yellow" : "green";
+  return level > 0.72 ? "red" : level > 0.4 ? "yellow" : "green";
 }
 
-function heatCell(value) {
-  const magnitude = Math.abs(value) / 256;
-  const glyph = magnitude < 0.04
-    ? "·"
-    : magnitude < 0.12
-      ? "░"
-      : magnitude < 0.25
-        ? "▒"
-        : magnitude < 0.5
-          ? "▓"
-          : "█";
-  const color = magnitude < 0.04 ? "border" : value >= 0 ? "green" : "cyan";
-  return paint(color, glyph);
+function historyCell(level, negative = false) {
+  if (level < 0.08) return paint("border", "·");
+  const glyph = level < 0.3 ? "░" : level < 0.58 ? "▒" : level < 0.82 ? "▓" : "█";
+  return paint(activationColor(level, negative), glyph);
+}
+
+function graphColumns(width) {
+  const history = state.activationHistory.slice(-width);
+  const missing = Math.max(0, width - history.length);
+  return [
+    ...Array.from({ length: missing }, () => ({ positive: 0, negative: 0 })),
+    ...history,
+  ];
+}
+
+function mirroredActivationGraph(width, rowsPerSide = 5) {
+  const columns = graphColumns(width);
+  const graph = [];
+
+  for (let level = rowsPerSide; level >= 1; level -= 1) {
+    const threshold = level / rowsPerSide;
+    graph.push(columns.map((column) => (
+      column.positive >= threshold
+        ? historyCell(column.positive)
+        : column.positive >= threshold - 1 / rowsPerSide
+          ? historyCell(column.positive * 0.72)
+          : " "
+    )).join(""));
+  }
+
+  graph.push(paint("border", "─".repeat(width)));
+
+  for (let level = 1; level <= rowsPerSide; level += 1) {
+    const threshold = level / rowsPerSide;
+    graph.push(columns.map((column) => (
+      column.negative >= threshold
+        ? historyCell(column.negative, true)
+        : column.negative >= threshold - 1 / rowsPerSide
+          ? historyCell(column.negative * 0.72, true)
+          : " "
+    )).join(""));
+  }
+
+  return graph;
 }
 
 function progressBar(value, width = 16) {
@@ -191,80 +223,65 @@ function progressBar(value, width = 16) {
   return `${paint("green", "█".repeat(filled))}${paint("border", "░".repeat(width - filled))}`;
 }
 
-function networkPanel(width) {
-  const frame = state.frame;
-  const block = frame?.block ?? 0;
-  const rows = [
-    `${paint("gray", "i   activation")}       ${paint("gray", `W${block} · a contribution`)}       ${paint("gray", "h[i]")}`,
-  ];
-
-  for (let index = 0; index < 8; index += 1) {
-    if (!frame) {
-      rows.push(`${String(index).padStart(2, "0")}  ${paint("border", "+0.00 ○   ········   ○ +0.00")}`);
-      continue;
-    }
-
-    const matrix = frame.contributions
-      .slice(index * 8, index * 8 + 8)
-      .map(heatCell)
-      .join("");
-    rows.push(
-      `${String(index).padStart(2, "0")}  ${paint("gray", signedQ8(frame.input[index]))} ${node(frame.input[index])}   ${matrix}   ${node(frame.output[index])} ${paint("white", signedQ8(frame.output[index]))}`,
-    );
-  }
-
-  rows.push(paint("dim", "· <.04  ░ <.12  ▒ <.25  ▓ <.50  █ ≥.50  cyan = negative"));
-  rows.push(paint("dim", "cells are signed q8.8 products from Rust/WASM linear memory"));
-  return box(`weight propagation / block ${block + 1} of 4`, rows, width);
-}
-
-function modelPanel(width) {
+function activityPanel(width, compact = false) {
+  const innerWidth = Math.max(16, width - 4);
   const frame = state.frame;
   const progress = frame?.tokenCount ? frame.tokenIndex / frame.tokenCount : 0;
-  const status = state.running ? "decoding" : state.complete ? "complete" : state.workerReady ? "ready" : "loading";
-
-  return box(`decoder / ${status}`, [
-    labelValue("model", state.model.name, "cyan"),
-    labelValue("arch", state.model.architecture),
-    labelValue("runtime", state.model.runtime),
-    labelValue("wasm init", state.initMs === null ? "n/a" : `${state.initMs.toFixed(2)} ms`),
-    labelValue("linear mem", formatBytes(state.memoryBytes)),
-    labelValue("token", `${String(frame?.tokenIndex || 0).padStart(3, "0")} / ${state.model.tokenCount || "?"}`),
-    labelValue("block", `${(frame?.block ?? 0) + 1} / 4`),
-    labelValue("tick", String(frame?.tick ?? 0)),
-    labelValue("energy", frame ? frame.energy.toFixed(3) : "0.000", "yellow"),
-    labelValue("dominant", `h[${frame?.dominant ?? 0}]`),
-    labelValue("weights", formatHash(state.model.checksum), "gray"),
-    labelValue("output", formatHash(frame?.outputChecksum || 0x811c9dc5), "gray"),
-    `${paint("gray", "progress".padEnd(12, " "))}${progressBar(progress)} ${String(Math.round(progress * 100)).padStart(3)}%`,
-  ], width);
-}
-
-function compactTracePanel(width) {
-  const frame = state.frame;
-  const progress = frame?.tokenCount ? frame.tokenIndex / frame.tokenCount : 0;
-  const rows = [
-    joinColumns(
-      `${paint("cyan", state.model.name)} · ${state.model.architecture}`,
-      state.running ? paint("yellow", "decoding") : state.complete ? paint("green", "complete") : paint("gray", "loading"),
-      width - 4,
-    ),
-    `${progressBar(progress, 20)} ${Math.round(progress * 100)}% · token ${frame?.tokenIndex || 0}/${state.model.tokenCount || "?"}`,
-  ];
-
-  for (const index of [0, 2, 4, 6]) {
-    const contributions = frame
-      ? frame.contributions.slice(index * 8, index * 8 + 8).map(heatCell).join("")
-      : paint("border", "········");
-    rows.push(
-      `h[${index}] ${frame ? node(frame.input[index]) : paint("border", "○")} ${contributions} ${frame ? node(frame.output[index]) : paint("border", "○")} ${frame ? signedQ8(frame.output[index]) : "+0.00"}`,
-    );
-  }
-
-  rows.push(
-    `${paint("gray", "block")} ${(frame?.block ?? 0) + 1}/4  ${paint("gray", "energy")} ${frame?.energy.toFixed(3) || "0.000"}  ${paint("gray", "hash")} ${formatHash(frame?.outputChecksum || 0x811c9dc5)}`,
+  const graphRows = compact ? 3 : clamp(Math.floor((terminal.rows - 24) / 2), 4, 8);
+  const graph = mirroredActivationGraph(innerWidth, graphRows);
+  const labels = joinColumns(
+    `${paint("green", "positive activation")} ${paint("gray", "▲")}`,
+    `${paint("gray", "token")} ${frame?.tokenIndex || 0}/${state.model.tokenCount || "?"}  ${paint("gray", "tick")} ${frame?.tick || 0}`,
+    innerWidth,
   );
-  return box("wasm weight trace", rows, width);
+  const footer = joinColumns(
+    `${paint("yellow", "negative activation")} ${paint("gray", "▼")}`,
+    `${progressBar(progress, compact ? 12 : 22)} ${String(Math.round(progress * 100)).padStart(3)}%`,
+    innerWidth,
+  );
+
+  return box("weight propagation history / rust wasm", [labels, ...graph, footer], width);
+}
+
+function channelMeter(value, width) {
+  const normalized = clamp(Math.abs(value) / 256, 0, 1);
+  const fill = Math.round(normalized * width);
+  const color = value < 0 ? "cyan" : normalized > 0.72 ? "red" : normalized > 0.4 ? "yellow" : "green";
+  return `${paint(color, "▮".repeat(fill))}${paint("border", "·".repeat(width - fill))}`;
+}
+
+function channelsPanel(width) {
+  const frame = state.frame;
+  const meterWidth = Math.max(6, width - 24);
+  const rows = Array.from({ length: 8 }, (_, index) => {
+    const value = frame?.output[index] || 0;
+    return `${paint("gray", `h${index}`.padEnd(4))}${channelMeter(value, meterWidth)} ${paint(value < 0 ? "cyan" : "white", signedQ8(value))}`;
+  });
+  return box("channels", rows, width);
+}
+
+function blocksPanel(width) {
+  const barWidth = Math.max(8, width - 25);
+  const rows = state.blockEnergy.map((energy, index) => {
+    const active = state.frame?.block === index;
+    return `${active ? paint("yellow", "▶") : paint("border", "·")} ${paint("gray", `residual_${index}`.padEnd(12))}${progressBar(energy, barWidth)} ${String(Math.round(energy * 100)).padStart(3)}%`;
+  });
+
+  rows.push(labelValue("quant", "signed i16 / q8.8"));
+  rows.push(labelValue("dominant", `h[${state.frame?.dominant ?? 0}]`, "cyan"));
+  rows.push(labelValue("weights", formatHash(state.model.checksum), "gray"));
+  rows.push(labelValue("output", formatHash(state.frame?.outputChecksum || 0x811c9dc5), "gray"));
+  return box("residual blocks", rows, width);
+}
+
+function tokenStreamPanel(width) {
+  const rows = state.emittedTokens.slice(-8).map((token, index, tokens) => {
+    const sequence = Math.max(1, (state.frame?.tokenIndex || 0) - tokens.length + index + 1);
+    const display = token === "\n" ? "\\n" : token.replace(/\s/g, "·");
+    return `${paint("gray", String(sequence).padStart(3, "0"))}  ${paint(index === tokens.length - 1 ? "green" : "white", display || "∅")}`;
+  });
+  while (rows.length < 8) rows.unshift("");
+  return box("token stream", rows, width);
 }
 
 function outputPanel(width, rowCount) {
@@ -285,7 +302,7 @@ function outputPanel(width, rowCount) {
   }
 
   while (rows.length < rowCount) rows.push("");
-  return box("decoded homepage", rows, width);
+  return box("decoded identity.rs", rows, width);
 }
 
 function promptLine() {
@@ -298,46 +315,51 @@ function renderNow() {
   if (!terminal.cols || !terminal.rows) return;
 
   const width = Math.max(36, terminal.cols - 1);
-  const compact = width < 72 || terminal.rows < 34;
-  const wide = width >= 104 && !compact;
+  const compact = width < 72 || terminal.rows < 42;
+  const wide = width >= 110 && !compact;
   const headerLeft = `${paint("green", "●")} ${paint("bold", "maksim.sh")} ${paint("gray", ":: identity inference")}`;
-  const headerRight = `${paint("white", "Maksim Soltan")} ${paint("gray", "· github.com/Gonzih")}`;
+  const headerRight = `${paint("white", "Maksim Soltan")} ${paint("gray", "· knowledge engineer · Rust")}`;
   const lines = [
     joinColumns(headerLeft, headerRight, width),
     paint("border", "─".repeat(width)),
   ];
 
   if (compact) {
-    lines.push(...compactTracePanel(width));
-  } else if (wide) {
-    const leftWidth = Math.floor(width * 0.6);
-    const rightWidth = width - leftWidth - 1;
-    lines.push(...zipPanels(networkPanel(leftWidth), modelPanel(rightWidth), leftWidth));
+    lines.push(...activityPanel(width, true));
   } else {
-    lines.push(...networkPanel(width));
-    const frame = state.frame;
-    lines.push(
-      joinColumns(
-        `${paint("cyan", state.model.name)} · token ${frame?.tokenIndex || 0}/${state.model.tokenCount || "?"} · block ${(frame?.block ?? 0) + 1}/4`,
-        `${paint("gray", "weights")} ${formatHash(state.model.checksum)}`,
-        width,
-      ),
-    );
+    lines.push(...activityPanel(width));
   }
 
-  const logRows = (state.log.length ? state.log : state.bootLines).slice(-2).map((line) => {
+  if (wide) {
+    const channelWidth = Math.floor(width * 0.34);
+    const blockWidth = Math.floor(width * 0.35);
+    const tokenWidth = width - channelWidth - blockWidth - 2;
+    lines.push(
+      "",
+      ...zipPanels(
+        zipPanels(channelsPanel(channelWidth), blocksPanel(blockWidth), channelWidth),
+        tokenStreamPanel(tokenWidth),
+        channelWidth + blockWidth + 1,
+      ),
+    );
+  } else if (!compact) {
+    const leftWidth = Math.floor((width - 1) / 2);
+    lines.push("", ...zipPanels(channelsPanel(leftWidth), blocksPanel(width - leftWidth - 1), leftWidth));
+  }
+
+  const logRows = (state.log.length ? state.log : state.bootLines).slice(-1).map((line) => {
     if (line.startsWith("$")) return paint("yellow", line);
     if (line.startsWith("error")) return paint("red", line);
     if (line.startsWith("[wasm]")) return paint("green", line);
     return paint("gray", line);
   });
   const logSectionHeight = logRows.length ? logRows.length + 1 : 0;
-  const outputRows = clamp(terminal.rows - lines.length - logSectionHeight - 5, 4, 18);
+  const outputRows = clamp(terminal.rows - lines.length - logSectionHeight - 5, 4, compact ? 9 : 16);
 
   lines.push("", ...outputPanel(width, outputRows));
   if (logRows.length) lines.push("", ...logRows);
   lines.push(
-    paint("dim", "replay  weights  source  contact  github  blog  email  clear"),
+    paint("dim", "replay  weights  source  github  clear"),
     promptLine(),
   );
 
@@ -368,6 +390,9 @@ function startInference() {
 
   state.decoded = "";
   state.frame = null;
+  state.activationHistory = [];
+  state.blockEnergy = [0, 0, 0, 0];
+  state.emittedTokens = [];
   state.elapsedMs = null;
   state.complete = false;
   state.running = true;
@@ -379,13 +404,9 @@ function startInference() {
 function openRoute(route) {
   const routes = {
     github: "https://github.com/Gonzih",
-    blog: "https://blog.gonzih.me",
-    cv: "https://gonzih.notion.site/Max-Gonzih-CV-d6cb096878a24c9293f2ac8f0f6f87ee",
   };
 
-  if (route === "email") {
-    window.location.href = "mailto:gonzih@gmail.com";
-  } else if (routes[route]) {
+  if (routes[route]) {
     window.open(routes[route], "_blank", "noopener,noreferrer");
   }
 }
@@ -405,7 +426,7 @@ function commandLines(command) {
         "replay   reset the q8 model and decode again",
         "weights  inspect model dimensions and hashes",
         "source   inspect the host / guest boundary",
-        "contact  print routes",
+        "github   open the only route",
         "^C       stop the current trace",
       ];
     case "weights":
@@ -426,14 +447,8 @@ function commandLines(command) {
     case "contact":
       return [
         "github  github.com/Gonzih",
-        "blog    blog.gonzih.me",
-        "email   gonzih@gmail.com",
-        "web     maksim.sh",
       ];
     case "github":
-    case "blog":
-    case "email":
-    case "cv":
       openRoute(name);
       return [`opened ${name}`];
     case "whoami":
@@ -567,7 +582,23 @@ worker.addEventListener("message", ({ data }) => {
 
   if (data.type === "frame") {
     state.frame = data.frame;
-    if (data.frame.emitted) state.decoded += data.frame.emitted;
+    const positive = data.frame.contributions
+      .filter((value) => value > 0)
+      .reduce((sum, value) => sum + value, 0) / (256 * 4);
+    const negative = Math.abs(data.frame.contributions
+      .filter((value) => value < 0)
+      .reduce((sum, value) => sum + value, 0)) / (256 * 4);
+    state.activationHistory.push({
+      positive: clamp(positive, 0, 1),
+      negative: clamp(negative, 0, 1),
+    });
+    if (state.activationHistory.length > 320) state.activationHistory.shift();
+    state.blockEnergy[data.frame.block] = clamp(data.frame.energy * 1.9, 0, 1);
+    if (data.frame.emitted) {
+      state.decoded += data.frame.emitted;
+      state.emittedTokens.push(data.frame.emitted);
+      if (state.emittedTokens.length > 32) state.emittedTokens.shift();
+    }
     render();
     return;
   }
