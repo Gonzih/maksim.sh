@@ -1,15 +1,67 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" prefix="og: https://ogp.me/ns# profile: https://ogp.me/ns/profile#">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#050508">
-    <link rel="icon" href="data:,">
-    <meta
-      name="description"
-      content="Maksim Soltan — knowledge engineer."
-    >
     <title>Maksim Soltan — Knowledge Engineer</title>
+    <meta name="description" content="Maksim Soltan — knowledge engineer.">
+    <meta name="author" content="Maksim Soltan">
+    <meta name="contact" content="gonzih@gmail.com">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+
+    <link rel="canonical" href="https://maksim.sh/">
+    <link rel="me" href="mailto:gonzih@gmail.com">
+    <link rel="me" href="https://github.com/Gonzih">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
+
+    <meta property="og:title" content="Maksim Soltan — Knowledge Engineer">
+    <meta property="og:description" content="Maksim Soltan — knowledge engineer.">
+    <meta property="og:type" content="profile">
+    <meta property="og:url" content="https://maksim.sh/">
+    <meta property="og:site_name" content="maksim.sh">
+    <meta property="og:locale" content="en_US">
+    <meta property="profile:first_name" content="Maksim">
+    <meta property="profile:last_name" content="Soltan">
+    <meta property="profile:username" content="Gonzih">
+    <meta property="og:image" content="https://maksim.sh/og.png">
+    <meta property="og:image:secure_url" content="https://maksim.sh/og.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta
+      property="og:image:alt"
+      content="Maksim Soltan, knowledge engineer, surrounded by a luminous knowledge graph."
+    >
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Maksim Soltan — Knowledge Engineer">
+    <meta name="twitter:description" content="Maksim Soltan — knowledge engineer.">
+    <meta name="twitter:image" content="https://maksim.sh/og.png">
+    <meta
+      name="twitter:image:alt"
+      content="Maksim Soltan, knowledge engineer, surrounded by a luminous knowledge graph."
+    >
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Maksim Soltan",
+        "url": "https://maksim.sh/",
+        "jobTitle": "Knowledge Engineer",
+        "description": "Knowledge engineer.",
+        "email": "mailto:gonzih@gmail.com",
+        "sameAs": ["https://github.com/Gonzih"],
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "contactType": "personal inquiries",
+          "email": "gonzih@gmail.com"
+        }
+      }
+    </script>
   </head>
   <body>
     <canvas id="field" aria-hidden="true"></canvas>
@@ -25,21 +77,32 @@
       </section>
 
       <footer class="footer">
-        <a
-          class="contact"
-          href="https://github.com/Gonzih"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Contact Maksim Soltan on GitHub"
-        >
-          <span>github.com/Gonzih</span>
-          <span class="arrow" aria-hidden="true">↗</span>
-        </a>
+        <nav class="contact-links" aria-label="Contact Maksim Soltan">
+          <a
+            class="contact"
+            href="https://github.com/Gonzih"
+            target="_blank"
+            rel="me noreferrer"
+            aria-label="Maksim Soltan on GitHub"
+          >
+            <span>github.com/Gonzih</span>
+            <span class="arrow" aria-hidden="true">↗</span>
+          </a>
+          <a
+            class="contact"
+            href="mailto:gonzih@gmail.com"
+            rel="me"
+            aria-label="Email Maksim Soltan at gonzih@gmail.com"
+          >
+            <span>gonzih@gmail.com</span>
+            <span class="arrow" aria-hidden="true">↗</span>
+          </a>
+        </nav>
       </footer>
     </main>
 
     <noscript>
-      Maksim Soltan · knowledge engineer · github.com/Gonzih
+      Maksim Soltan · knowledge engineer · github.com/Gonzih · gonzih@gmail.com
     </noscript>
     <script type="module" src="/src/main.js"></script>
   </body>

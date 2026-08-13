@@ -78,6 +78,14 @@ body::after {
   justify-content: flex-start;
 }
 
+.contact-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: clamp(24px, 3.4vw, 54px);
+  pointer-events: auto;
+}
+
 .hero {
   align-self: center;
   width: min-content;
@@ -204,6 +212,11 @@ noscript {
     font-size: 18px;
   }
 
+  .contact-links {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
