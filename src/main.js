@@ -2,6 +2,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
+import initRenderer, { render_braille_graph as renderBrailleGraph } from "./wasm/maksim_wasm.js";
 import "./styles.css";
 
 const terminalElement = document.querySelector("#terminal");
@@ -15,6 +16,9 @@ const ANSI = {
   cyan: "\x1b[38;5;81m",
   yellow: "\x1b[38;5;221m",
   red: "\x1b[38;5;203m",
+  magenta: "\x1b[38;5;213m",
+  violet: "\x1b[38;5;141m",
+  blue: "\x1b[38;5;111m",
   white: "\x1b[38;5;252m",
   gray: "\x1b[38;5;245m",
   border: "\x1b[38;5;239m",
@@ -22,8 +26,46 @@ const ANSI = {
 
 const ANSI_PATTERN = /(\x1b\[[0-9;?]*[ -/]*[@-~])/g;
 const paint = (color, value) => `${ANSI[color]}${value}${ANSI.reset}`;
+const paintHex = (hex, value) => {
+  const normalized = hex.replace("#", "");
+  const red = Number.parseInt(normalized.slice(0, 2), 16);
+  const green = Number.parseInt(normalized.slice(2, 4), 16);
+  const blue = Number.parseInt(normalized.slice(4, 6), 16);
+  return `\x1b[38;2;${red};${green};${blue}m${value}${ANSI.reset}`;
+};
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
+
+const PALETTE = {
+  positive: ["#ff5f68", "#ff9f43", "#f5d76e", "#68e69b"],
+  negative: ["#718cff", "#9e68ff", "#d64ed8", "#ff4f9a"],
+  meter: ["#5de28d", "#d8df64", "#ffad4d", "#ff5f68"],
+  cyan: ["#50d7e8", "#668cff", "#a468ff"],
+  inactive: "#252a27",
+};
+
+const PANEL = {
+  green: { accent: "#69e399", border: "#315440" },
+  yellow: { accent: "#f0d36f", border: "#59512d" },
+  cyan: { accent: "#58d5e6", border: "#2c535b" },
+  violet: { accent: "#ad7bff", border: "#4b3964" },
+  rose: { accent: "#ff6ca8", border: "#65354d" },
+};
+
+function hexChannels(hex) {
+  const value = hex.replace("#", "");
+  return [0, 2, 4].map((offset) => Number.parseInt(value.slice(offset, offset + 2), 16));
+}
+
+function gradientColor(colors, position) {
+  const scaled = clamp(position, 0, 1) * (colors.length - 1);
+  const index = Math.min(colors.length - 2, Math.floor(scaled));
+  const fraction = scaled - index;
+  const start = hexChannels(colors[index]);
+  const end = hexChannels(colors[index + 1]);
+  const channels = start.map((value, channel) => Math.round(value + (end[channel] - value) * fraction));
+  return `#${channels.map((value) => value.toString(16).padStart(2, "0")).join("")}`;
+}
 
 const terminal = new Terminal({
   allowTransparency: false,
@@ -32,15 +74,18 @@ const terminal = new Terminal({
   disableStdin: false,
   fontFamily: '"SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace',
   fontSize: 13,
-  lineHeight: 1.06,
+  fontWeight: "500",
+  fontWeightBold: "700",
+  letterSpacing: 0,
+  lineHeight: 1.02,
   scrollback: 0,
   smoothScrollDuration: 0,
   theme: {
-    background: "#090b0a",
-    foreground: "#d7ddd8",
-    cursor: "#72e6a1",
-    selectionBackground: "#244936",
-    black: "#090b0a",
+    background: "#050706",
+    foreground: "#dce3de",
+    cursor: "#69e399",
+    selectionBackground: "#1f4733",
+    black: "#050706",
     brightBlack: "#59625c",
     green: "#72e6a1",
     brightGreen: "#9af0b8",
@@ -67,6 +112,7 @@ const state = {
   booting: true,
   autoTyping: false,
   workerReady: false,
+  rendererReady: false,
   running: false,
   complete: false,
   input: "",
@@ -79,6 +125,10 @@ const state = {
   initMs: null,
   memoryBytes: null,
   elapsedMs: null,
+  startedAt: performance.now(),
+  inferenceHz: 0,
+  rateFrames: 0,
+  rateWindowAt: performance.now(),
   activationHistory: [],
   blockEnergy: [0, 0, 0, 0],
   emittedTokens: [],
@@ -91,8 +141,23 @@ const state = {
   },
 };
 
+const device = {
+  cores: navigator.hardwareConcurrency || 1,
+  memory: navigator.deviceMemory ? `${navigator.deviceMemory}GiB` : "n/a",
+};
+
 let renderScheduled = false;
 const worker = new Worker(new URL("./inference.worker.js", import.meta.url), { type: "module" });
+
+void initRenderer()
+  .then(() => {
+    state.rendererReady = true;
+    render();
+  })
+  .catch((error) => {
+    addLog(`error: braille raster failed: ${String(error)}`);
+    render();
+  });
 
 function visibleLength(value) {
   return Array.from(value.replace(ANSI_PATTERN, "")).length;
@@ -132,15 +197,21 @@ function joinColumns(left, right, width) {
   return `${left}${" ".repeat(room)}${right}`;
 }
 
-function box(title, rows, width) {
+function box(title, rows, width, style = PANEL.cyan, index = "") {
   const innerWidth = Math.max(12, width - 2);
-  const titleText = ` ${title} `;
-  const topPadding = Math.max(0, innerWidth - titleText.length - 1);
-  const top = `${ANSI.border}┌─${paint("cyan", titleText)}${"─".repeat(topPadding)}┐${ANSI.reset}`;
-  const bottom = `${ANSI.border}└${"─".repeat(innerWidth)}┘${ANSI.reset}`;
+  const maximumTitle = Math.max(4, width - 8);
+  const titleCharacters = Array.from(`${index}${title}`);
+  const clippedTitle = titleCharacters.length > maximumTitle
+    ? `${titleCharacters.slice(0, maximumTitle - 1).join("")}…`
+    : titleCharacters.join("");
+  const indexLength = index ? Array.from(index).length : 0;
+  const titleText = ` ${index ? paintHex(style.accent, clippedTitle.slice(0, indexLength)) : ""}${paint("white", clippedTitle.slice(indexLength))} `;
+  const topPadding = Math.max(0, width - visibleLength(titleText) - 5);
+  const top = `${paintHex(style.border, "╭─┐")}${titleText}${paintHex(style.border, `┌${"─".repeat(topPadding)}╮`)}`;
+  const bottom = paintHex(style.border, `╰${"─".repeat(innerWidth)}╯`);
   const body = rows.map((row) => {
-    const content = fitText(row, innerWidth - 2);
-    return `${ANSI.border}│${ANSI.reset} ${content} ${ANSI.border}│${ANSI.reset}`;
+    const content = fitText(row, innerWidth);
+    return `${paintHex(style.border, "│")}${content}${paintHex(style.border, "│")}`;
   });
   return [top, ...body, bottom];
 }
@@ -167,126 +238,145 @@ function signedQ8(value) {
   return `${value >= 0 ? "+" : ""}${normalized}`.padStart(6, " ");
 }
 
-function activationColor(level, negative = false) {
-  if (negative) return level > 0.72 ? "red" : level > 0.4 ? "yellow" : "green";
-  return level > 0.72 ? "red" : level > 0.4 ? "yellow" : "green";
+function graphSamples(field, characterWidth) {
+  const samples = state.activationHistory
+    .slice(-(characterWidth * 2))
+    .map((entry) => Math.round(clamp(entry[field], 0, 1) * 255));
+  return Uint8Array.from(samples);
 }
 
-function historyCell(level, negative = false) {
-  if (level < 0.08) return paint("border", "·");
-  const glyph = level < 0.3 ? "░" : level < 0.58 ? "▒" : level < 0.82 ? "▓" : "█";
-  return paint(activationColor(level, negative), glyph);
+function brailleRows(field, width, rows, inverted, colors) {
+  if (!state.rendererReady) {
+    return Array.from({ length: rows }, () => " ".repeat(width));
+  }
+
+  const raster = renderBrailleGraph(graphSamples(field, width), width, rows, inverted).split("\n");
+  return raster.map((line, row) => paintHex(
+    gradientColor(colors, rows === 1 ? 0 : row / (rows - 1)),
+    line,
+  ));
 }
 
-function graphColumns(width) {
-  const history = state.activationHistory.slice(-width);
-  const missing = Math.max(0, width - history.length);
-  return [
-    ...Array.from({ length: missing }, () => ({ positive: 0, negative: 0 })),
-    ...history,
-  ];
+function centeredRule(width, label) {
+  const labelText = ` ${label} `;
+  const remaining = Math.max(0, width - visibleLength(labelText));
+  const left = Math.floor(remaining / 2);
+  return `${paintHex("#27322c", "─".repeat(left))}${labelText}${paintHex("#27322c", "─".repeat(remaining - left))}`;
 }
 
 function mirroredActivationGraph(width, rowsPerSide = 5) {
-  const columns = graphColumns(width);
-  const graph = [];
+  const positive = brailleRows("positive", width, rowsPerSide, false, PALETTE.positive);
+  const negative = brailleRows("negative", width, rowsPerSide, true, PALETTE.negative);
+  const axis = centeredRule(
+    width,
+    `${paintHex(PALETTE.positive.at(-1), "▲")}${paintHex(PALETTE.negative[0], "▼")} ${paint("gray", "signed w·x")}`,
+  );
+  return [...positive, axis, ...negative];
+}
 
-  for (let level = rowsPerSide; level >= 1; level -= 1) {
-    const threshold = level / rowsPerSide;
-    graph.push(columns.map((column) => (
-      column.positive >= threshold
-        ? historyCell(column.positive)
-        : column.positive >= threshold - 1 / rowsPerSide
-          ? historyCell(column.positive * 0.72)
-          : " "
-    )).join(""));
+function meter(value, width = 16, colors = PALETTE.meter) {
+  const filled = Math.round(clamp(value, 0, 1) * width);
+  let output = "";
+  for (let index = 0; index < width; index += 1) {
+    const color = index < filled
+      ? gradientColor(colors, width === 1 ? 0 : index / (width - 1))
+      : PALETTE.inactive;
+    output += paintHex(color, "■");
   }
-
-  graph.push(paint("border", "─".repeat(width)));
-
-  for (let level = 1; level <= rowsPerSide; level += 1) {
-    const threshold = level / rowsPerSide;
-    graph.push(columns.map((column) => (
-      column.negative >= threshold
-        ? historyCell(column.negative, true)
-        : column.negative >= threshold - 1 / rowsPerSide
-          ? historyCell(column.negative * 0.72, true)
-          : " "
-    )).join(""));
-  }
-
-  return graph;
+  return output;
 }
 
 function progressBar(value, width = 16) {
-  const filled = Math.round(clamp(value, 0, 1) * width);
-  return `${paint("green", "█".repeat(filled))}${paint("border", "░".repeat(width - filled))}`;
+  return meter(value, width, PALETTE.meter);
 }
 
 function activityPanel(width, compact = false) {
-  const innerWidth = Math.max(16, width - 4);
+  const innerWidth = Math.max(16, width - 2);
   const frame = state.frame;
   const progress = frame?.tokenCount ? frame.tokenIndex / frame.tokenCount : 0;
-  const graphRows = compact ? 3 : clamp(Math.floor((terminal.rows - 24) / 2), 4, 8);
+  const graphRows = compact ? 3 : clamp(Math.floor((terminal.rows - 34) / 2), 4, 8);
   const graph = mirroredActivationGraph(innerWidth, graphRows);
   const labels = joinColumns(
-    `${paint("green", "positive activation")} ${paint("gray", "▲")}`,
-    `${paint("gray", "token")} ${frame?.tokenIndex || 0}/${state.model.tokenCount || "?"}  ${paint("gray", "tick")} ${frame?.tick || 0}`,
+    ` ${paintHex("#68e69b", "Σ⁺")} ${paint("gray", "max(wᵢxᵢ, 0)")}`,
+    `${paint("gray", "tok")} ${frame?.tokenIndex || 0}/${state.model.tokenCount || "?"}  ${paint("gray", "tick")} ${frame?.tick || 0} `,
     innerWidth,
   );
   const footer = joinColumns(
-    `${paint("yellow", "negative activation")} ${paint("gray", "▼")}`,
-    `${progressBar(progress, compact ? 12 : 22)} ${String(Math.round(progress * 100)).padStart(3)}%`,
+    ` ${paintHex("#ff4f9a", "Σ⁻")} ${paint("gray", "min(wᵢxᵢ, 0)")}`,
+    `${progressBar(progress, compact ? 10 : 20)} ${String(Math.round(progress * 100)).padStart(3)}% `,
     innerWidth,
   );
 
-  return box("weight propagation history / rust wasm", [labels, ...graph, footer], width);
+  return box("act / q8.8 matmul", [labels, ...graph, footer], width, PANEL.green, "¹");
 }
 
 function channelMeter(value, width) {
   const normalized = clamp(Math.abs(value) / 256, 0, 1);
-  const fill = Math.round(normalized * width);
-  const color = value < 0 ? "cyan" : normalized > 0.72 ? "red" : normalized > 0.4 ? "yellow" : "green";
-  return `${paint(color, "▮".repeat(fill))}${paint("border", "·".repeat(width - fill))}`;
+  return meter(normalized, width, value < 0 ? PALETTE.cyan : PALETTE.meter);
 }
 
 function channelsPanel(width) {
   const frame = state.frame;
-  const meterWidth = Math.max(6, width - 24);
+  const meterWidth = Math.max(6, width - 14);
   const rows = Array.from({ length: 8 }, (_, index) => {
     const value = frame?.output[index] || 0;
-    return `${paint("gray", `h${index}`.padEnd(4))}${channelMeter(value, meterWidth)} ${paint(value < 0 ? "cyan" : "white", signedQ8(value))}`;
+    const marker = frame?.dominant === index ? paintHex(PANEL.cyan.accent, "›") : " ";
+    return `${marker}${paint("gray", `h${index}`.padEnd(3))}${channelMeter(value, meterWidth)} ${paint(value < 0 ? "cyan" : "white", signedQ8(value))}`;
   });
-  return box("channels", rows, width);
+  return box("vec / hidden state", rows, width, PANEL.cyan, "²");
 }
 
 function blocksPanel(width) {
-  const barWidth = Math.max(8, width - 25);
+  const barWidth = Math.max(8, width - 21);
   const rows = state.blockEnergy.map((energy, index) => {
     const active = state.frame?.block === index;
-    return `${active ? paint("yellow", "▶") : paint("border", "·")} ${paint("gray", `residual_${index}`.padEnd(12))}${progressBar(energy, barWidth)} ${String(Math.round(energy * 100)).padStart(3)}%`;
+    return `${active ? paintHex(PANEL.yellow.accent, "▶") : paintHex(PALETTE.inactive, "■")} ${paint("gray", `res_${index}`.padEnd(7))}${progressBar(energy, barWidth)} ${String(Math.round(energy * 100)).padStart(3)}%`;
   });
 
-  rows.push(labelValue("quant", "signed i16 / q8.8"));
-  rows.push(labelValue("dominant", `h[${state.frame?.dominant ?? 0}]`, "cyan"));
-  rows.push(labelValue("weights", formatHash(state.model.checksum), "gray"));
-  rows.push(labelValue("output", formatHash(state.frame?.outputChecksum || 0x811c9dc5), "gray"));
-  return box("residual blocks", rows, width);
+  rows.push(labelValue(" kernel", "i16 matvec / q8.8"));
+  rows.push(labelValue(" argmax", `h[${state.frame?.dominant ?? 0}]`, "cyan"));
+  rows.push(labelValue(" weights", formatHash(state.model.checksum), "gray"));
+  rows.push(labelValue(" output", formatHash(state.frame?.outputChecksum || 0x811c9dc5), "gray"));
+  return box("res / kernel", rows, width, PANEL.yellow, "³");
 }
 
 function tokenStreamPanel(width) {
-  const rows = state.emittedTokens.slice(-8).map((token, index, tokens) => {
+  const innerWidth = Math.max(12, width - 2);
+  const rows = state.emittedTokens.slice(-8).map((event, index, tokens) => {
     const sequence = Math.max(1, (state.frame?.tokenIndex || 0) - tokens.length + index + 1);
-    const display = token === "\n" ? "\\n" : token.replace(/\s/g, "·");
-    return `${paint("gray", String(sequence).padStart(3, "0"))}  ${paint(index === tokens.length - 1 ? "green" : "white", display || "∅")}`;
+    const display = event.value === "\n" ? "\\n" : event.value.replace(/\s/g, "·");
+    const token = `${paint("gray", String(sequence).padStart(3, "0"))} ${paintHex(index === tokens.length - 1 ? PANEL.violet.accent : "#dce3de", display || "∅")}`;
+    const trace = `${paint("gray", `h${event.dominant}`)} ${paintHex("#f2d475", event.energy.toFixed(2))}`;
+    return ` ${joinColumns(token, trace, innerWidth - 1)}`;
   });
   while (rows.length < 8) rows.unshift("");
-  return box("token stream", rows, width);
+  return box("tok / decoder", rows, width, PANEL.violet, "⁴");
+}
+
+function highlightRust(line) {
+  const pattern = /(\"(?:\\.|[^\"\\])*\"|\b(?:pub|struct|impl|const|fn|self|Self|str)\b|\bMaksimSoltan\b|&'static|->|[{}()[\];,:])/g;
+  let output = "";
+  let cursor = 0;
+
+  for (const match of line.matchAll(pattern)) {
+    output += line.slice(cursor, match.index);
+    const token = match[0];
+    if (token.startsWith('"')) output += paintHex("#77dfa4", token);
+    else if (token === "MaksimSoltan") output += paintHex("#f2d475", token);
+    else if (/^(pub|struct|impl|const|fn|self|Self|str)$/.test(token)) output += paintHex("#ff6fae", token);
+    else if (token === "->" || token === "&'static") output += paintHex("#68d7e8", token);
+    else output += paint("gray", token);
+    cursor = match.index + token.length;
+  }
+
+  return output + line.slice(cursor);
 }
 
 function outputPanel(width, rowCount) {
   const cursor = state.running ? `${ANSI.green}▌${ANSI.reset}` : "";
-  let rows = state.decoded ? state.decoded.split("\n") : [paint("dim", "awaiting output head...")];
+  let rows = state.decoded
+    ? state.decoded.split("\n").map(highlightRust)
+    : [paint("dim", " waiting for output head...")];
 
   if (state.running && rows.length) {
     rows[rows.length - 1] += cursor;
@@ -302,7 +392,7 @@ function outputPanel(width, rowCount) {
   }
 
   while (rows.length < rowCount) rows.push("");
-  return box("decoded identity.rs", rows, width);
+  return box("identity.rs / decoded", rows, width, PANEL.rose, "⁵");
 }
 
 function promptLine() {
@@ -310,18 +400,38 @@ function promptLine() {
   return `${prompt}${state.input}${ANSI.green}▌${ANSI.reset}`;
 }
 
+function formatBytes(value) {
+  if (!Number.isFinite(value)) return "n/a";
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(0)}KiB`;
+  return `${(value / (1024 * 1024)).toFixed(1)}MiB`;
+}
+
+function telemetryLine(width) {
+  const left = [
+    `${paint("gray", "wasm")} ${paintHex("#68e69b", formatBytes(state.memoryBytes))}`,
+    `${paint("gray", "init")} ${paint("white", state.initMs === null ? "—" : `${state.initMs.toFixed(2)}ms`)}`,
+    `${paint("gray", "step")} ${paintHex("#f2d475", `${state.inferenceHz}/s`)}`,
+    `${paint("gray", "device")} ${paint("white", `${device.cores}c/${device.memory}`)}`,
+    `${paint("gray", "raster")} ${paintHex("#ad7bff", "2×4 braille")}`,
+  ].join(` ${paintHex("#323b36", "│")} `);
+  return joinColumns(left, paintHex("#69e399", "github.com/Gonzih"), width);
+}
+
 function renderNow() {
   renderScheduled = false;
   if (!terminal.cols || !terminal.rows) return;
 
   const width = Math.max(36, terminal.cols - 1);
-  const compact = width < 72 || terminal.rows < 42;
+  const compact = width < 72 || terminal.rows < 36;
   const wide = width >= 110 && !compact;
-  const headerLeft = `${paint("green", "●")} ${paint("bold", "maksim.sh")} ${paint("gray", ":: identity inference")}`;
-  const headerRight = `${paint("white", "Maksim Soltan")} ${paint("gray", "· knowledge engineer · Rust")}`;
+  const live = state.running ? paintHex("#69e399", "●") : paintHex("#4f5b54", "●");
+  const headerLeft = `${live} ${paint("bold", "maksim.sh")} ${paintHex("#34413a", "│")} ${paint("gray", state.model.name)}`;
+  const headerRight = compact
+    ? `${paintHex("#ff6ca8", "rust")} ${paint("gray", "→")} ${paintHex("#ad7bff", "wasm32")}`
+    : `${paint("white", "Maksim Soltan")}  ${paintHex("#ff6ca8", "rust")} ${paint("gray", "→")} ${paintHex("#ad7bff", "wasm32")}`;
   const lines = [
     joinColumns(headerLeft, headerRight, width),
-    paint("border", "─".repeat(width)),
+    paintHex("#26312b", "─".repeat(width)),
   ];
 
   if (compact) {
@@ -354,12 +464,13 @@ function renderNow() {
     return paint("gray", line);
   });
   const logSectionHeight = logRows.length ? logRows.length + 1 : 0;
-  const outputRows = clamp(terminal.rows - lines.length - logSectionHeight - 5, 4, compact ? 9 : 16);
+  const outputRows = clamp(terminal.rows - lines.length - logSectionHeight - (compact ? 5 : 7), 4, compact ? 9 : 16);
 
   lines.push("", ...outputPanel(width, outputRows));
   if (logRows.length) lines.push("", ...logRows);
+  if (!compact) lines.push(telemetryLine(width));
   lines.push(
-    paint("dim", "replay  weights  source  github  clear"),
+    `${paint("dim", "replay  weights  source  github  clear")} ${paintHex("#34413a", "│")} ${paint("gray", "↑↓ history  ^C stop")}`,
     promptLine(),
   );
 
@@ -394,6 +505,9 @@ function startInference() {
   state.blockEnergy = [0, 0, 0, 0];
   state.emittedTokens = [];
   state.elapsedMs = null;
+  state.inferenceHz = 0;
+  state.rateFrames = 0;
+  state.rateWindowAt = performance.now();
   state.complete = false;
   state.running = true;
   addLog("[wasm] dispatch identity.q8 / trace every residual block");
@@ -439,9 +553,10 @@ function commandLines(command) {
       ];
     case "source":
       return [
-        "guest    Rust/WASM owns weights, activations, tokenization, output",
+        "guest    Rust/WASM owns q8 weights, activations, tokens, braille raster",
+        "raster   two adjacent samples -> one 2x4 cell via 5x5 glyph lookup",
         "worker   advances one residual block per frame",
-        "host     xterm.js renders typed arrays as ANSI contribution heat",
+        "host     xterm.js writes ANSI rows; it does not calculate the graph",
         "network  none; inference and content stay on this device",
       ];
     case "contact":
@@ -582,21 +697,36 @@ worker.addEventListener("message", ({ data }) => {
 
   if (data.type === "frame") {
     state.frame = data.frame;
-    const positive = data.frame.contributions
-      .filter((value) => value > 0)
-      .reduce((sum, value) => sum + value, 0) / (256 * 4);
-    const negative = Math.abs(data.frame.contributions
-      .filter((value) => value < 0)
-      .reduce((sum, value) => sum + value, 0)) / (256 * 4);
+    state.rateFrames += 1;
+    const rateNow = performance.now();
+    const rateElapsed = rateNow - state.rateWindowAt;
+    if (rateElapsed >= 350) {
+      state.inferenceHz = Math.round((state.rateFrames * 1_000) / rateElapsed);
+      state.rateFrames = 0;
+      state.rateWindowAt = rateNow;
+    }
+    const contributionCount = Math.max(1, data.frame.contributions.length);
+    const positive = Math.sqrt(data.frame.contributions.reduce(
+      (sum, value) => sum + (value > 0 ? value * value : 0),
+      0,
+    ) / contributionCount) / 112;
+    const negative = Math.sqrt(data.frame.contributions.reduce(
+      (sum, value) => sum + (value < 0 ? value * value : 0),
+      0,
+    ) / contributionCount) / 112;
     state.activationHistory.push({
       positive: clamp(positive, 0, 1),
       negative: clamp(negative, 0, 1),
     });
-    if (state.activationHistory.length > 320) state.activationHistory.shift();
+    if (state.activationHistory.length > 1_024) state.activationHistory.shift();
     state.blockEnergy[data.frame.block] = clamp(data.frame.energy * 1.9, 0, 1);
     if (data.frame.emitted) {
       state.decoded += data.frame.emitted;
-      state.emittedTokens.push(data.frame.emitted);
+      state.emittedTokens.push({
+        value: data.frame.emitted,
+        dominant: data.frame.dominant,
+        energy: data.frame.energy,
+      });
       if (state.emittedTokens.length > 32) state.emittedTokens.shift();
     }
     render();
@@ -631,11 +761,17 @@ worker.addEventListener("error", (event) => {
 
 terminal.onData(handleInput);
 terminalElement.addEventListener("pointerdown", () => terminal.focus());
-window.addEventListener("resize", () => {
+function fitTerminal() {
+  const fontSize = window.innerWidth < 680 ? 11 : 13;
+  if (terminal.options.fontSize !== fontSize) terminal.options.fontSize = fontSize;
   fitAddon.fit();
+}
+
+window.addEventListener("resize", () => {
+  fitTerminal();
   render();
 });
 window.addEventListener("beforeunload", () => worker.terminate());
 
-fitAddon.fit();
+fitTerminal();
 render();

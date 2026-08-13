@@ -8,6 +8,12 @@ contributions are streamed from a Web Worker into xterm.js, while its output
 head progressively decodes the homepage content. The visualization is a tiny
 purpose-built model, not a general-purpose LLM.
 
+The history graph is rasterized in Rust/WASM using btop's paired-sample model:
+two adjacent scalar samples are quantized to four vertical levels each, then
+encoded as one Unicode Braille cell through a 5×5 lookup. Positive and negative
+contributions use mirrored up/down tables. xterm.js only applies ANSI color and
+paints the returned rows.
+
 ## Run locally
 
 ```sh

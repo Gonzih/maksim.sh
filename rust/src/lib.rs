@@ -6,9 +6,21 @@ const Q: i32 = 256;
 const FNV_OFFSET: u32 = 0x811c_9dc5;
 const FNV_PRIME: u32 = 0x0100_0193;
 
-const BOOT_LINES: [&str; 3] = [
+// Two adjacent scalar samples become one 2x4 Braille cell. The lookup order is
+// left_level * 5 + right_level, matching btop's high-resolution graph raster.
+const BRAILLE_UP: [&str; 25] = [
+    " ", "⢀", "⢠", "⢰", "⢸", "⡀", "⣀", "⣠", "⣰", "⣸", "⡄", "⣄", "⣤", "⣴", "⣼", "⡆", "⣆", "⣦", "⣶",
+    "⣾", "⡇", "⣇", "⣧", "⣷", "⣿",
+];
+const BRAILLE_DOWN: [&str; 25] = [
+    " ", "⠈", "⠘", "⠸", "⢸", "⠁", "⠉", "⠙", "⠹", "⢹", "⠃", "⠋", "⠛", "⠻", "⢻", "⠇", "⠏", "⠟", "⠿",
+    "⢿", "⡇", "⡏", "⡟", "⡿", "⣿",
+];
+
+const BOOT_LINES: [&str; 4] = [
     "[wasm] identity.q8 mapped into linear memory",
     "[wasm] 4 residual blocks / 8 channels / q8.8",
+    "[wasm] braille raster online / 2 samples per cell",
     "[wasm] output head bound to identity.rs.tokens",
 ];
 
@@ -39,6 +51,56 @@ pub fn boot_line(index: u32) -> String {
         .copied()
         .unwrap_or("[wasm] decoder ready")
         .to_owned()
+}
+
+#[wasm_bindgen]
+pub fn render_braille_graph(
+    samples: &[u8],
+    character_width: u32,
+    character_rows: u32,
+    inverted: bool,
+) -> String {
+    let width = (character_width as usize).clamp(1, 512);
+    let rows = (character_rows as usize).clamp(1, 24);
+    let required_samples = width * 2;
+    let source_offset = samples.len().saturating_sub(required_samples);
+    let left_padding = required_samples.saturating_sub(samples.len());
+    let vertical_levels = rows * 4;
+    let table = if inverted { &BRAILLE_DOWN } else { &BRAILLE_UP };
+
+    let sample_at = |index: usize| -> u8 {
+        if index < left_padding {
+            0
+        } else {
+            samples[source_offset + index - left_padding]
+        }
+    };
+
+    let level_at = |sample: u8, segment: usize| -> usize {
+        let height = (sample as usize * vertical_levels + 127) / 255;
+        height.saturating_sub(segment * 4).min(4)
+    };
+
+    let mut output = String::with_capacity(width * rows * 3 + rows.saturating_sub(1));
+    for display_row in 0..rows {
+        let segment = if inverted {
+            display_row
+        } else {
+            rows - display_row - 1
+        };
+
+        for column in 0..width {
+            let left = level_at(sample_at(column * 2), segment);
+            let right = level_at(sample_at(column * 2 + 1), segment);
+            output.push_str(table[left * 5 + right]);
+        }
+
+        if display_row + 1 < rows {
+            output.push('\n');
+        }
+    }
+
+    output
 }
 
 #[wasm_bindgen]
@@ -402,5 +464,19 @@ mod tests {
             assert_eq!(left.output, right.output);
             assert_eq!(left.contributions, right.contributions);
         }
+    }
+
+    #[test]
+    fn braille_graph_pairs_adjacent_samples() {
+        assert_eq!(render_braille_graph(&[0, 255], 1, 1, false), "⢸");
+        assert_eq!(render_braille_graph(&[255, 0], 1, 1, false), "⡇");
+        assert_eq!(render_braille_graph(&[255, 255], 1, 1, false), "⣿");
+        assert_eq!(render_braille_graph(&[0, 255], 1, 1, true), "⢸");
+    }
+
+    #[test]
+    fn braille_graph_rasters_from_the_baseline() {
+        assert_eq!(render_braille_graph(&[128, 128], 1, 2, false), " \n⣿");
+        assert_eq!(render_braille_graph(&[128, 128], 1, 2, true), "⣿\n ");
     }
 }

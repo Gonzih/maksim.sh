@@ -1,6 +1,6 @@
 :root {
   color-scheme: dark;
-  background: #090b0a;
+  background: #050706;
   font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
@@ -19,7 +19,7 @@ body,
 
 body {
   overflow: hidden;
-  background: #090b0a;
+  background: #050706;
 }
 
 #terminal {
@@ -34,11 +34,16 @@ body {
 
 .xterm-viewport {
   overflow-y: hidden !important;
-  background: #090b0a !important;
+  background: #050706 !important;
 }
 
 .xterm .xterm-screen canvas {
   image-rendering: auto;
+}
+
+.xterm {
+  font-variant-ligatures: none;
+  text-rendering: geometricPrecision;
 }
 
 .sr-only {
