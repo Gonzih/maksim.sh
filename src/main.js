@@ -135,7 +135,7 @@ const state = {
   model: {
     name: "identity.q8",
     architecture: "4x8 residual / q8.8",
-    runtime: "rust / wasm32",
+    runtime: "wasm32 / q8.8",
     tokenCount: 0,
     checksum: 0,
   },
@@ -353,29 +353,26 @@ function tokenStreamPanel(width) {
   return box("tok / decoder", rows, width, PANEL.violet, "⁴");
 }
 
-function highlightRust(line) {
-  const pattern = /(\"(?:\\.|[^\"\\])*\"|\b(?:pub|struct|impl|const|fn|self|Self|str)\b|\bMaksimSoltan\b|&'static|->|[{}()[\];,:])/g;
-  let output = "";
-  let cursor = 0;
+function highlightProfile(line, index) {
+  if (index === 0) return `  ${ANSI.bold}${paintHex("#ffffff", line)}${ANSI.reset}`;
+  if (index === 1) return `  ${paintHex("#69e399", line)}`;
+  if (line === "links") return `  ${paintHex("#4b3964", "─┐")} ${paintHex(PANEL.violet.accent, line)} ${paintHex("#4b3964", "┌────────")}`;
+  if (line === "contact") return `  ${paintHex("#65354d", "─┐")} ${paintHex(PANEL.rose.accent, line)} ${paintHex("#65354d", "┌──────")}`;
 
-  for (const match of line.matchAll(pattern)) {
-    output += line.slice(cursor, match.index);
-    const token = match[0];
-    if (token.startsWith('"')) output += paintHex("#77dfa4", token);
-    else if (token === "MaksimSoltan") output += paintHex("#f2d475", token);
-    else if (/^(pub|struct|impl|const|fn|self|Self|str)$/.test(token)) output += paintHex("#ff6fae", token);
-    else if (token === "->" || token === "&'static") output += paintHex("#68d7e8", token);
-    else output += paint("gray", token);
-    cursor = match.index + token.length;
+  const [label, ...valueParts] = line.trim().split(/\s{2,}/);
+  const value = valueParts.join("  ");
+  if (value) {
+    const valueColor = value.startsWith("http") ? "#69dce9" : "#f2d475";
+    return `  ${paint("gray", label.padEnd(8))}${paintHex("#3c4942", "→")} ${paintHex(valueColor, value)}`;
   }
 
-  return output + line.slice(cursor);
+  return line;
 }
 
 function outputPanel(width, rowCount) {
   const cursor = state.running ? `${ANSI.green}▌${ANSI.reset}` : "";
   let rows = state.decoded
-    ? state.decoded.split("\n").map(highlightRust)
+    ? state.decoded.split("\n").map(highlightProfile)
     : [paint("dim", " waiting for output head...")];
 
   if (state.running && rows.length) {
@@ -392,7 +389,7 @@ function outputPanel(width, rowCount) {
   }
 
   while (rows.length < rowCount) rows.push("");
-  return box("identity.rs / decoded", rows, width, PANEL.rose, "⁵");
+  return box("profile / decoded", rows, width, PANEL.rose, "⁵");
 }
 
 function promptLine() {
@@ -427,8 +424,8 @@ function renderNow() {
   const live = state.running ? paintHex("#69e399", "●") : paintHex("#4f5b54", "●");
   const headerLeft = `${live} ${paint("bold", "maksim.sh")} ${paintHex("#34413a", "│")} ${paint("gray", state.model.name)}`;
   const headerRight = compact
-    ? `${paintHex("#ff6ca8", "rust")} ${paint("gray", "→")} ${paintHex("#ad7bff", "wasm32")}`
-    : `${paint("white", "Maksim Soltan")}  ${paintHex("#ff6ca8", "rust")} ${paint("gray", "→")} ${paintHex("#ad7bff", "wasm32")}`;
+    ? paintHex("#69dce9", "@Gonzih")
+    : `${paint("white", "Maksim Soltan")}  ${paint("gray", "·")}  ${paintHex("#69dce9", "github.com/Gonzih")}`;
   const lines = [
     joinColumns(headerLeft, headerRight, width),
     paintHex("#26312b", "─".repeat(width)),
@@ -553,7 +550,7 @@ function commandLines(command) {
       ];
     case "source":
       return [
-        "guest    Rust/WASM owns q8 weights, activations, tokens, braille raster",
+        "guest    WebAssembly owns q8 weights, activations, tokens, braille raster",
         "raster   two adjacent samples -> one 2x4 cell via 5x5 glyph lookup",
         "worker   advances one residual block per frame",
         "host     xterm.js writes ANSI rows; it does not calculate the graph",

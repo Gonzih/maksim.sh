@@ -21,23 +21,17 @@ const BOOT_LINES: [&str; 4] = [
     "[wasm] identity.q8 mapped into linear memory",
     "[wasm] 4 residual blocks / 8 channels / q8.8",
     "[wasm] braille raster online / 2 samples per cell",
-    "[wasm] output head bound to identity.rs.tokens",
+    "[wasm] output head bound to profile.txt.tokens",
 ];
 
-const IDENTITY_SOURCE: &str = r#"pub struct MaksimSoltan;
+const PROFILE_OUTPUT: &str = r#"Maksim Soltan
+knowledge engineer
 
-impl MaksimSoltan {
-    pub const ROLE: &'static str = "knowledge engineer";
-    pub const ONLY_LANGUAGE: &'static str = "Rust";
+links
+github  https://github.com/Gonzih
 
-    pub fn paradigm(&self) -> &'static str {
-        "functional programming"
-    }
-
-    pub fn github(&self) -> &'static str {
-        "https://github.com/Gonzih"
-    }
-}"#;
+contact
+github  @Gonzih"#;
 
 #[wasm_bindgen]
 pub fn boot_line_count() -> u32 {
@@ -150,7 +144,7 @@ impl Inference {
             });
 
         Inference {
-            tokens: tokenize(IDENTITY_SOURCE),
+            tokens: tokenize(PROFILE_OUTPUT),
             weights,
             biases,
             state: [0; WIDTH],
@@ -179,7 +173,7 @@ impl Inference {
     }
 
     pub fn runtime(&self) -> String {
-        "rust / wasm32-unknown-unknown".to_owned()
+        "wasm32 / q8.8".to_owned()
     }
 
     pub fn token_count(&self) -> u32 {
@@ -449,8 +443,8 @@ mod tests {
             decoded.push_str(&model.step().emitted);
         }
 
-        assert_eq!(decoded, IDENTITY_SOURCE);
-        assert!(model.token_count() > 100);
+        assert_eq!(decoded, PROFILE_OUTPUT);
+        assert!(model.token_count() > 20);
     }
 
     #[test]
