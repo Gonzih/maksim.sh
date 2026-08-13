@@ -3,17 +3,55 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#050706">
+    <meta name="theme-color" content="#050508">
     <meta
       name="description"
-      content="maksim.sh — a local WebAssembly profile trace by Maksim Soltan."
+      content="Maksim Soltan — knowledge engineer."
     >
-    <title>maksim.sh</title>
+    <title>Maksim Soltan — Knowledge Engineer</title>
   </head>
   <body>
-    <main id="terminal" aria-label="maksim.sh interactive terminal"></main>
-    <div id="status" class="sr-only" aria-live="polite"></div>
-    <noscript>maksim.sh requires JavaScript and WebAssembly.</noscript>
+    <canvas id="field" aria-hidden="true"></canvas>
+    <div class="vignette" aria-hidden="true"></div>
+
+    <main class="shell">
+      <header class="topbar">
+        <a class="domain" href="/" aria-label="Maksim Soltan home">maksim<span>.sh</span></a>
+        <div class="mode" aria-hidden="true">
+          <span class="live-dot"></span>
+          <span id="phase">topology</span>
+        </div>
+      </header>
+
+      <section class="hero" aria-labelledby="name">
+        <h1 class="name" id="name">
+          <span>Maksim</span>
+          <span class="outline">Soltan</span>
+        </h1>
+        <p class="role">knowledge engineer</p>
+      </section>
+
+      <footer class="footer">
+        <a
+          class="contact"
+          href="https://github.com/Gonzih"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Contact Maksim Soltan on GitHub"
+        >
+          <span>github.com/Gonzih</span>
+          <span class="arrow" aria-hidden="true">↗</span>
+        </a>
+        <div class="telemetry" aria-hidden="true">
+          <span id="node-count">172 nodes</span>
+          <span>continuous topology</span>
+        </div>
+      </footer>
+    </main>
+
+    <noscript>
+      Maksim Soltan · knowledge engineer · github.com/Gonzih
+    </noscript>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

@@ -1,6 +1,3 @@
 node_modules/
 dist/
-src/wasm/
-src/wasm-simd/
-rust/target/
 .DS_Store

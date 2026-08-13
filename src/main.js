@@ -1,774 +1,502 @@
-import { FitAddon } from "@xterm/addon-fit";
-import { WebLinksAddon } from "@xterm/addon-web-links";
-import { Terminal } from "@xterm/xterm";
-import "@xterm/xterm/css/xterm.css";
-import initRenderer, { render_braille_graph as renderBrailleGraph } from "./wasm/maksim_wasm.js";
+import {
+  Delaunay,
+  color as d3Color,
+  easeCubicInOut,
+  forceCollide,
+  forceManyBody,
+  forceSimulation,
+  range,
+  timer,
+} from "d3";
 import "./styles.css";
 
-const terminalElement = document.querySelector("#terminal");
-const statusElement = document.querySelector("#status");
+const canvas = document.querySelector("#field");
+const context = canvas.getContext("2d", { alpha: false });
+const phaseElement = document.querySelector("#phase");
+const nodeCountElement = document.querySelector("#node-count");
 
-const ANSI = {
-  reset: "\x1b[0m",
-  bold: "\x1b[1m",
-  dim: "\x1b[2m",
-  green: "\x1b[38;5;114m",
-  cyan: "\x1b[38;5;81m",
-  yellow: "\x1b[38;5;221m",
-  red: "\x1b[38;5;203m",
-  magenta: "\x1b[38;5;213m",
-  violet: "\x1b[38;5;141m",
-  blue: "\x1b[38;5;111m",
-  white: "\x1b[38;5;252m",
-  gray: "\x1b[38;5;245m",
-  border: "\x1b[38;5;239m",
-};
-
-const ANSI_PATTERN = /(\x1b\[[0-9;?]*[ -/]*[@-~])/g;
-const paint = (color, value) => `${ANSI[color]}${value}${ANSI.reset}`;
-const paintHex = (hex, value) => {
-  const normalized = hex.replace("#", "");
-  const red = Number.parseInt(normalized.slice(0, 2), 16);
-  const green = Number.parseInt(normalized.slice(2, 4), 16);
-  const blue = Number.parseInt(normalized.slice(4, 6), 16);
-  return `\x1b[38;2;${red};${green};${blue}m${value}${ANSI.reset}`;
-};
-const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
-const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
-
-const PALETTE = {
-  positive: ["#ff5f68", "#ff9f43", "#f5d76e", "#68e69b"],
-  negative: ["#718cff", "#9e68ff", "#d64ed8", "#ff4f9a"],
-  meter: ["#5de28d", "#d8df64", "#ffad4d", "#ff5f68"],
-  cyan: ["#50d7e8", "#668cff", "#a468ff"],
-  inactive: "#252a27",
-};
-
-const PANEL = {
-  green: { accent: "#69e399", border: "#315440" },
-  yellow: { accent: "#f0d36f", border: "#59512d" },
-  cyan: { accent: "#58d5e6", border: "#2c535b" },
-  violet: { accent: "#ad7bff", border: "#4b3964" },
-  rose: { accent: "#ff6ca8", border: "#65354d" },
-};
-
-function hexChannels(hex) {
-  const value = hex.replace("#", "");
-  return [0, 2, 4].map((offset) => Number.parseInt(value.slice(offset, offset + 2), 16));
-}
-
-function gradientColor(colors, position) {
-  const scaled = clamp(position, 0, 1) * (colors.length - 1);
-  const index = Math.min(colors.length - 2, Math.floor(scaled));
-  const fraction = scaled - index;
-  const start = hexChannels(colors[index]);
-  const end = hexChannels(colors[index + 1]);
-  const channels = start.map((value, channel) => Math.round(value + (end[channel] - value) * fraction));
-  return `#${channels.map((value) => value.toString(16).padStart(2, "0")).join("")}`;
-}
-
-const terminal = new Terminal({
-  allowTransparency: false,
-  convertEol: true,
-  cursorBlink: false,
-  disableStdin: false,
-  fontFamily: '"SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace',
-  fontSize: 13,
-  fontWeight: "500",
-  fontWeightBold: "700",
-  letterSpacing: 0,
-  lineHeight: 1.02,
-  scrollback: 0,
-  smoothScrollDuration: 0,
-  theme: {
-    background: "#050706",
-    foreground: "#dce3de",
-    cursor: "#69e399",
-    selectionBackground: "#1f4733",
-    black: "#050706",
-    brightBlack: "#59625c",
-    green: "#72e6a1",
-    brightGreen: "#9af0b8",
-    cyan: "#70d7e8",
-    brightCyan: "#a5edf5",
-    yellow: "#f2d37d",
-    brightYellow: "#ffe6a4",
-    red: "#f27f7f",
-    brightRed: "#ff9c9c",
-    white: "#d7ddd8",
-    brightWhite: "#ffffff",
-  },
+const TAU = Math.PI * 2;
+const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+const PHASE_DURATION = 10_000;
+const PHASES = ["topology", "identity", "signal", "flow"];
+const CONCEPTS = [
+  "ontology",
+  "retrieval",
+  "provenance",
+  "semantics",
+  "memory",
+  "evaluation",
+  "interfaces",
+  "systems",
+  "structure",
+  "evidence",
+];
+const PALETTE = ["#c6ff63", "#62e8ff", "#9170ff", "#ff5b91", "#ffd166"];
+const PALETTE_RGB = PALETTE.map((value) => {
+  const parsed = d3Color(value);
+  return [parsed.r, parsed.g, parsed.b];
 });
 
-const fitAddon = new FitAddon();
-terminal.loadAddon(fitAddon);
-terminal.loadAddon(new WebLinksAddon((event, uri) => {
-  event.preventDefault();
-  window.open(uri, "_blank", "noopener,noreferrer");
-}));
-terminal.open(terminalElement);
+const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+const pointer = { x: 0, y: 0, active: false, energy: 0 };
+const bursts = [];
 
-const state = {
-  booting: true,
-  autoTyping: false,
-  workerReady: false,
-  rendererReady: false,
-  running: false,
-  complete: false,
-  input: "",
-  commandHistory: [],
-  historyIndex: 0,
-  bootLines: [],
-  log: [],
-  decoded: "",
-  frame: null,
-  initMs: null,
-  memoryBytes: null,
-  elapsedMs: null,
-  startedAt: performance.now(),
-  inferenceHz: 0,
-  rateFrames: 0,
-  rateWindowAt: performance.now(),
-  activationHistory: [],
-  blockEnergy: [0, 0, 0, 0],
-  emittedTokens: [],
-  model: {
-    name: "identity.q8",
-    architecture: "4x8 residual / q8.8",
-    runtime: "wasm32 / q8.8",
-    tokenCount: 0,
-    checksum: 0,
-  },
-};
+let width = 0;
+let height = 0;
+let pixelRatio = 1;
+let nodes = [];
+let monogramTargets = [];
+let simulation = null;
+let currentPhase = -1;
+let resizeRequest = 0;
+let animationElapsed = 0;
 
-const device = {
-  cores: navigator.hardwareConcurrency || 1,
-  memory: navigator.deviceMemory ? `${navigator.deviceMemory}GiB` : "n/a",
-};
-
-let renderScheduled = false;
-const worker = new Worker(new URL("./inference.worker.js", import.meta.url), { type: "module" });
-
-void initRenderer()
-  .then(() => {
-    state.rendererReady = true;
-    render();
-  })
-  .catch((error) => {
-    addLog(`error: braille raster failed: ${String(error)}`);
-    render();
-  });
-
-function visibleLength(value) {
-  return Array.from(value.replace(ANSI_PATTERN, "")).length;
+function clamp(value, minimum = 0, maximum = 1) {
+  return Math.max(minimum, Math.min(maximum, value));
 }
 
-function clipAnsi(value, width) {
-  const tokens = value.split(ANSI_PATTERN);
-  let output = "";
-  let visible = 0;
-
-  for (const token of tokens) {
-    if (!token) continue;
-    if (token.startsWith("\x1b[")) {
-      output += token;
-      continue;
-    }
-
-    for (const character of Array.from(token)) {
-      if (visible >= width) return `${output}${ANSI.reset}`;
-      output += character;
-      visible += 1;
-    }
-  }
-
-  return output;
-}
-
-function fitText(value, width) {
-  const length = visibleLength(value);
-  if (length <= width) return `${value}${" ".repeat(width - length)}`;
-  return `${clipAnsi(value, Math.max(0, width - 1))}…`;
-}
-
-function joinColumns(left, right, width) {
-  const room = width - visibleLength(left) - visibleLength(right);
-  if (room < 2) return fitText(left, width);
-  return `${left}${" ".repeat(room)}${right}`;
-}
-
-function box(title, rows, width, style = PANEL.cyan, index = "") {
-  const innerWidth = Math.max(12, width - 2);
-  const maximumTitle = Math.max(4, width - 8);
-  const titleCharacters = Array.from(`${index}${title}`);
-  const clippedTitle = titleCharacters.length > maximumTitle
-    ? `${titleCharacters.slice(0, maximumTitle - 1).join("")}…`
-    : titleCharacters.join("");
-  const indexLength = index ? Array.from(index).length : 0;
-  const titleText = ` ${index ? paintHex(style.accent, clippedTitle.slice(0, indexLength)) : ""}${paint("white", clippedTitle.slice(indexLength))} `;
-  const topPadding = Math.max(0, width - visibleLength(titleText) - 5);
-  const top = `${paintHex(style.border, "╭─┐")}${titleText}${paintHex(style.border, `┌${"─".repeat(topPadding)}╮`)}`;
-  const bottom = paintHex(style.border, `╰${"─".repeat(innerWidth)}╯`);
-  const body = rows.map((row) => {
-    const content = fitText(row, innerWidth);
-    return `${paintHex(style.border, "│")}${content}${paintHex(style.border, "│")}`;
-  });
-  return [top, ...body, bottom];
-}
-
-function zipPanels(left, right, leftWidth) {
-  const height = Math.max(left.length, right.length);
-  const output = [];
-  for (let index = 0; index < height; index += 1) {
-    output.push(`${left[index] || " ".repeat(leftWidth)} ${right[index] || ""}`);
-  }
-  return output;
-}
-
-function labelValue(label, value, color = "white") {
-  return `${paint("gray", label.padEnd(12, " "))}${paint(color, value)}`;
-}
-
-function formatHash(value) {
-  return `0x${(value >>> 0).toString(16).padStart(8, "0")}`;
-}
-
-function signedQ8(value) {
-  const normalized = (value / 256).toFixed(2);
-  return `${value >= 0 ? "+" : ""}${normalized}`.padStart(6, " ");
-}
-
-function graphSamples(field, characterWidth) {
-  const samples = state.activationHistory
-    .slice(-(characterWidth * 2))
-    .map((entry) => Math.round(clamp(entry[field], 0, 1) * 255));
-  return Uint8Array.from(samples);
-}
-
-function brailleRows(field, width, rows, inverted, colors) {
-  if (!state.rendererReady) {
-    return Array.from({ length: rows }, () => " ".repeat(width));
-  }
-
-  const raster = renderBrailleGraph(graphSamples(field, width), width, rows, inverted).split("\n");
-  return raster.map((line, row) => paintHex(
-    gradientColor(colors, rows === 1 ? 0 : row / (rows - 1)),
-    line,
-  ));
-}
-
-function centeredRule(width, label) {
-  const labelText = ` ${label} `;
-  const remaining = Math.max(0, width - visibleLength(labelText));
-  const left = Math.floor(remaining / 2);
-  return `${paintHex("#27322c", "─".repeat(left))}${labelText}${paintHex("#27322c", "─".repeat(remaining - left))}`;
-}
-
-function mirroredActivationGraph(width, rowsPerSide = 5) {
-  const positive = brailleRows("positive", width, rowsPerSide, false, PALETTE.positive);
-  const negative = brailleRows("negative", width, rowsPerSide, true, PALETTE.negative);
-  const axis = centeredRule(
-    width,
-    `${paintHex(PALETTE.positive.at(-1), "▲")}${paintHex(PALETTE.negative[0], "▼")} ${paint("gray", "signed w·x")}`,
-  );
-  return [...positive, axis, ...negative];
-}
-
-function meter(value, width = 16, colors = PALETTE.meter) {
-  const filled = Math.round(clamp(value, 0, 1) * width);
-  let output = "";
-  for (let index = 0; index < width; index += 1) {
-    const color = index < filled
-      ? gradientColor(colors, width === 1 ? 0 : index / (width - 1))
-      : PALETTE.inactive;
-    output += paintHex(color, "■");
-  }
-  return output;
-}
-
-function progressBar(value, width = 16) {
-  return meter(value, width, PALETTE.meter);
-}
-
-function activityPanel(width, compact = false) {
-  const innerWidth = Math.max(16, width - 2);
-  const frame = state.frame;
-  const progress = frame?.tokenCount ? frame.tokenIndex / frame.tokenCount : 0;
-  const graphRows = compact ? 3 : clamp(Math.floor((terminal.rows - 34) / 2), 4, 8);
-  const graph = mirroredActivationGraph(innerWidth, graphRows);
-  const labels = joinColumns(
-    ` ${paintHex("#68e69b", "Σ⁺")} ${paint("gray", "max(wᵢxᵢ, 0)")}`,
-    `${paint("gray", "tok")} ${frame?.tokenIndex || 0}/${state.model.tokenCount || "?"}  ${paint("gray", "tick")} ${frame?.tick || 0} `,
-    innerWidth,
-  );
-  const footer = joinColumns(
-    ` ${paintHex("#ff4f9a", "Σ⁻")} ${paint("gray", "min(wᵢxᵢ, 0)")}`,
-    `${progressBar(progress, compact ? 10 : 20)} ${String(Math.round(progress * 100)).padStart(3)}% `,
-    innerWidth,
-  );
-
-  return box("act / q8.8 matmul", [labels, ...graph, footer], width, PANEL.green, "¹");
-}
-
-function channelMeter(value, width) {
-  const normalized = clamp(Math.abs(value) / 256, 0, 1);
-  return meter(normalized, width, value < 0 ? PALETTE.cyan : PALETTE.meter);
-}
-
-function channelsPanel(width) {
-  const frame = state.frame;
-  const meterWidth = Math.max(6, width - 14);
-  const rows = Array.from({ length: 8 }, (_, index) => {
-    const value = frame?.output[index] || 0;
-    const marker = frame?.dominant === index ? paintHex(PANEL.cyan.accent, "›") : " ";
-    return `${marker}${paint("gray", `h${index}`.padEnd(3))}${channelMeter(value, meterWidth)} ${paint(value < 0 ? "cyan" : "white", signedQ8(value))}`;
-  });
-  return box("vec / hidden state", rows, width, PANEL.cyan, "²");
-}
-
-function blocksPanel(width) {
-  const barWidth = Math.max(8, width - 21);
-  const rows = state.blockEnergy.map((energy, index) => {
-    const active = state.frame?.block === index;
-    return `${active ? paintHex(PANEL.yellow.accent, "▶") : paintHex(PALETTE.inactive, "■")} ${paint("gray", `res_${index}`.padEnd(7))}${progressBar(energy, barWidth)} ${String(Math.round(energy * 100)).padStart(3)}%`;
-  });
-
-  rows.push(labelValue(" kernel", "i16 matvec / q8.8"));
-  rows.push(labelValue(" argmax", `h[${state.frame?.dominant ?? 0}]`, "cyan"));
-  rows.push(labelValue(" weights", formatHash(state.model.checksum), "gray"));
-  rows.push(labelValue(" output", formatHash(state.frame?.outputChecksum || 0x811c9dc5), "gray"));
-  return box("res / kernel", rows, width, PANEL.yellow, "³");
-}
-
-function tokenStreamPanel(width) {
-  const innerWidth = Math.max(12, width - 2);
-  const rows = state.emittedTokens.slice(-8).map((event, index, tokens) => {
-    const sequence = Math.max(1, (state.frame?.tokenIndex || 0) - tokens.length + index + 1);
-    const display = event.value === "\n" ? "\\n" : event.value.replace(/\s/g, "·");
-    const token = `${paint("gray", String(sequence).padStart(3, "0"))} ${paintHex(index === tokens.length - 1 ? PANEL.violet.accent : "#dce3de", display || "∅")}`;
-    const trace = `${paint("gray", `h${event.dominant}`)} ${paintHex("#f2d475", event.energy.toFixed(2))}`;
-    return ` ${joinColumns(token, trace, innerWidth - 1)}`;
-  });
-  while (rows.length < 8) rows.unshift("");
-  return box("tok / decoder", rows, width, PANEL.violet, "⁴");
-}
-
-function highlightProfile(line, index) {
-  if (index === 0) return `  ${ANSI.bold}${paintHex("#ffffff", line)}${ANSI.reset}`;
-  if (index === 1) return `  ${paintHex("#69e399", line)}`;
-  if (line === "links") return `  ${paintHex("#4b3964", "─┐")} ${paintHex(PANEL.violet.accent, line)} ${paintHex("#4b3964", "┌────────")}`;
-  if (line === "contact") return `  ${paintHex("#65354d", "─┐")} ${paintHex(PANEL.rose.accent, line)} ${paintHex("#65354d", "┌──────")}`;
-
-  const [label, ...valueParts] = line.trim().split(/\s{2,}/);
-  const value = valueParts.join("  ");
-  if (value) {
-    const valueColor = value.startsWith("http") ? "#69dce9" : "#f2d475";
-    return `  ${paint("gray", label.padEnd(8))}${paintHex("#3c4942", "→")} ${paintHex(valueColor, value)}`;
-  }
-
-  return line;
-}
-
-function outputPanel(width, rowCount) {
-  const cursor = state.running ? `${ANSI.green}▌${ANSI.reset}` : "";
-  let rows = state.decoded
-    ? state.decoded.split("\n").map(highlightProfile)
-    : [paint("dim", " waiting for output head...")];
-
-  if (state.running && rows.length) {
-    rows[rows.length - 1] += cursor;
-  }
-
-  if (rows.length > rowCount) {
-    const omitted = rows.length - rowCount + 2;
-    rows = [
-      rows[0],
-      paint("dim", `… ${omitted} decoded lines above …`),
-      ...rows.slice(-(rowCount - 2)),
-    ];
-  }
-
-  while (rows.length < rowCount) rows.push("");
-  return box("profile / decoded", rows, width, PANEL.rose, "⁵");
-}
-
-function promptLine() {
-  const prompt = `${paint("green", "maksim.sh")} ${paint("gray", "$ ")}`;
-  return `${prompt}${state.input}${ANSI.green}▌${ANSI.reset}`;
-}
-
-function formatBytes(value) {
-  if (!Number.isFinite(value)) return "n/a";
-  if (value < 1024 * 1024) return `${(value / 1024).toFixed(0)}KiB`;
-  return `${(value / (1024 * 1024)).toFixed(1)}MiB`;
-}
-
-function telemetryLine(width) {
-  const left = [
-    `${paint("gray", "wasm")} ${paintHex("#68e69b", formatBytes(state.memoryBytes))}`,
-    `${paint("gray", "init")} ${paint("white", state.initMs === null ? "—" : `${state.initMs.toFixed(2)}ms`)}`,
-    `${paint("gray", "step")} ${paintHex("#f2d475", `${state.inferenceHz}/s`)}`,
-    `${paint("gray", "device")} ${paint("white", `${device.cores}c/${device.memory}`)}`,
-    `${paint("gray", "raster")} ${paintHex("#ad7bff", "2×4 braille")}`,
-  ].join(` ${paintHex("#323b36", "│")} `);
-  return joinColumns(left, paintHex("#69e399", "github.com/Gonzih"), width);
-}
-
-function renderNow() {
-  renderScheduled = false;
-  if (!terminal.cols || !terminal.rows) return;
-
-  const width = Math.max(36, terminal.cols - 1);
-  const compact = width < 72 || terminal.rows < 36;
-  const wide = width >= 110 && !compact;
-  const live = state.running ? paintHex("#69e399", "●") : paintHex("#4f5b54", "●");
-  const headerLeft = `${live} ${paint("bold", "maksim.sh")} ${paintHex("#34413a", "│")} ${paint("gray", state.model.name)}`;
-  const headerRight = compact
-    ? paintHex("#69dce9", "@Gonzih")
-    : `${paint("white", "Maksim Soltan")}  ${paint("gray", "·")}  ${paintHex("#69dce9", "github.com/Gonzih")}`;
-  const lines = [
-    joinColumns(headerLeft, headerRight, width),
-    paintHex("#26312b", "─".repeat(width)),
-  ];
-
-  if (compact) {
-    lines.push(...activityPanel(width, true));
-  } else {
-    lines.push(...activityPanel(width));
-  }
-
-  if (wide) {
-    const channelWidth = Math.floor(width * 0.34);
-    const blockWidth = Math.floor(width * 0.35);
-    const tokenWidth = width - channelWidth - blockWidth - 2;
-    lines.push(
-      "",
-      ...zipPanels(
-        zipPanels(channelsPanel(channelWidth), blocksPanel(blockWidth), channelWidth),
-        tokenStreamPanel(tokenWidth),
-        channelWidth + blockWidth + 1,
-      ),
-    );
-  } else if (!compact) {
-    const leftWidth = Math.floor((width - 1) / 2);
-    lines.push("", ...zipPanels(channelsPanel(leftWidth), blocksPanel(width - leftWidth - 1), leftWidth));
-  }
-
-  const logRows = (state.log.length ? state.log : state.bootLines).slice(-1).map((line) => {
-    if (line.startsWith("$")) return paint("yellow", line);
-    if (line.startsWith("error")) return paint("red", line);
-    if (line.startsWith("[wasm]")) return paint("green", line);
-    return paint("gray", line);
-  });
-  const logSectionHeight = logRows.length ? logRows.length + 1 : 0;
-  const outputRows = clamp(terminal.rows - lines.length - logSectionHeight - (compact ? 5 : 7), 4, compact ? 9 : 16);
-
-  lines.push("", ...outputPanel(width, outputRows));
-  if (logRows.length) lines.push("", ...logRows);
-  if (!compact) lines.push(telemetryLine(width));
-  lines.push(
-    `${paint("dim", "replay  weights  source  github  clear")} ${paintHex("#34413a", "│")} ${paint("gray", "↑↓ history  ^C stop")}`,
-    promptLine(),
-  );
-
-  const visible = lines.length > terminal.rows
-    ? lines.slice(lines.length - terminal.rows)
-    : lines;
-  terminal.write(`\x1b[2J\x1b[H\x1b[?25l${visible.join("\r\n")}`);
-}
-
-function render() {
-  if (renderScheduled) return;
-  renderScheduled = true;
-  requestAnimationFrame(renderNow);
-}
-
-function addLog(...lines) {
-  state.log.push(...lines);
-  if (state.log.length > 80) state.log.splice(0, state.log.length - 80);
-  if (lines.length) statusElement.textContent = lines.at(-1);
-}
-
-function startInference() {
-  if (!state.workerReady) {
-    addLog("error: wasm inference worker is not ready");
-    render();
-    return;
-  }
-
-  state.decoded = "";
-  state.frame = null;
-  state.activationHistory = [];
-  state.blockEnergy = [0, 0, 0, 0];
-  state.emittedTokens = [];
-  state.elapsedMs = null;
-  state.inferenceHz = 0;
-  state.rateFrames = 0;
-  state.rateWindowAt = performance.now();
-  state.complete = false;
-  state.running = true;
-  addLog("[wasm] dispatch identity.q8 / trace every residual block");
-  worker.postMessage({ type: "start", delayMs: 14 });
-  render();
-}
-
-function openRoute(route) {
-  const routes = {
-    github: "https://github.com/Gonzih",
+function seededRandom(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state += 0x6d2b79f5;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4_294_967_296;
   };
-
-  if (routes[route]) {
-    window.open(routes[route], "_blank", "noopener,noreferrer");
-  }
 }
 
-function commandLines(command) {
-  const [name] = command.trim().toLowerCase().split(/\s+/, 1);
-
-  switch (name) {
-    case "":
-      return [];
-    case "infer":
-    case "replay":
-      queueMicrotask(startInference);
-      return [];
-    case "help":
-      return [
-        "replay   reset the q8 model and decode again",
-        "weights  inspect model dimensions and hashes",
-        "source   inspect the host / guest boundary",
-        "github   open the only route",
-        "^C       stop the current trace",
-      ];
-    case "weights":
-      return [
-        `model    ${state.model.name}`,
-        `shape    ${state.model.architecture}`,
-        `hash     ${formatHash(state.model.checksum)}`,
-        "math     signed i16 q8.8 matvec + residual + rational squash",
-        "payload  homepage token stream compiled into the wasm guest",
-      ];
-    case "source":
-      return [
-        "guest    WebAssembly owns q8 weights, activations, tokens, braille raster",
-        "raster   two adjacent samples -> one 2x4 cell via 5x5 glyph lookup",
-        "worker   advances one residual block per frame",
-        "host     xterm.js writes ANSI rows; it does not calculate the graph",
-        "network  none; inference and content stay on this device",
-      ];
-    case "contact":
-      return [
-        "github  github.com/Gonzih",
-      ];
-    case "github":
-      openRoute(name);
-      return [`opened ${name}`];
-    case "whoami":
-      return ["Maksim Soltan"];
-    case "clear":
-      state.log = [];
-      return [];
-    default:
-      return [`error: command not found: ${command}`];
-  }
+function rgba(paletteIndex, alpha) {
+  const [red, green, blue] = PALETTE_RGB[paletteIndex % PALETTE_RGB.length];
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
-function submitCommand() {
-  const command = state.input;
-  state.input = "";
-
-  if (command.trim()) {
-    state.commandHistory.push(command);
-    state.historyIndex = state.commandHistory.length;
-    addLog(`$ ${command}`, ...commandLines(command));
-  } else {
-    addLog("$");
-  }
-  render();
+function desiredNodeCount() {
+  if (width < 640) return 88;
+  if (width < 1_080) return 128;
+  return 172;
 }
 
-function handleInput(data) {
-  if (state.booting || state.autoTyping) return;
+function createNodes(count) {
+  const random = seededRandom(0x6d616b73);
+  return range(count).map((id) => {
+    const cluster = id % CONCEPTS.length;
+    return {
+      id,
+      cluster,
+      label: id < CONCEPTS.length ? CONCEPTS[id] : null,
+      seed: random(),
+      phase: random() * TAU,
+      radius: 1 + random() * 1.8,
+      x: width * (0.15 + random() * 0.7),
+      y: height * (0.15 + random() * 0.7),
+      vx: 0,
+      vy: 0,
+    };
+  });
+}
 
-  if (data === "\r" || data === "\n") {
-    submitCommand();
-    return;
-  }
+function sampleMonogram(count) {
+  const sampleCanvas = document.createElement("canvas");
+  const sampleContext = sampleCanvas.getContext("2d", { willReadFrequently: true });
+  sampleCanvas.width = 1_000;
+  sampleCanvas.height = 560;
+  sampleContext.clearRect(0, 0, sampleCanvas.width, sampleCanvas.height);
+  sampleContext.fillStyle = "#fff";
+  sampleContext.font = '900 470px "Arial Black", "Helvetica Neue", Arial, sans-serif';
+  sampleContext.textAlign = "center";
+  sampleContext.textBaseline = "alphabetic";
+  sampleContext.fillText("MS", sampleCanvas.width / 2, 470);
 
-  if (data === "\u007f") {
-    state.input = state.input.slice(0, -1);
-    render();
-    return;
-  }
+  const pixels = sampleContext.getImageData(0, 0, sampleCanvas.width, sampleCanvas.height).data;
+  const candidates = [];
+  const stride = 7;
 
-  if (data === "\u0003") {
-    state.input = "";
-    if (state.running) {
-      worker.postMessage({ type: "stop" });
-      state.running = false;
-      addLog("^C inference trace stopped");
-    } else {
-      addLog("^C");
+  for (let y = 0; y < sampleCanvas.height; y += stride) {
+    for (let x = 0; x < sampleCanvas.width; x += stride) {
+      if (pixels[(y * sampleCanvas.width + x) * 4 + 3] > 128) {
+        candidates.push({ x, y });
+      }
     }
-    render();
-    return;
   }
 
-  if (data === "\u001b[A") {
-    state.historyIndex = Math.max(0, state.historyIndex - 1);
-    state.input = state.commandHistory[state.historyIndex] || "";
-    render();
-    return;
+  const random = seededRandom(0x736f6c74);
+  for (let index = candidates.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [candidates[index], candidates[swapIndex]] = [candidates[swapIndex], candidates[index]];
   }
 
-  if (data === "\u001b[B") {
-    state.historyIndex = Math.min(state.commandHistory.length, state.historyIndex + 1);
-    state.input = state.commandHistory[state.historyIndex] || "";
-    render();
-    return;
-  }
+  const selected = candidates.slice(0, count);
+  const xExtent = selected.reduce(
+    ([minimum, maximum], point) => [Math.min(minimum, point.x), Math.max(maximum, point.x)],
+    [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY],
+  );
+  const yExtent = selected.reduce(
+    ([minimum, maximum], point) => [Math.min(minimum, point.y), Math.max(maximum, point.y)],
+    [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY],
+  );
+  const sourceWidth = Math.max(1, xExtent[1] - xExtent[0]);
+  const sourceHeight = Math.max(1, yExtent[1] - yExtent[0]);
+  const targetWidth = width * (width < 720 ? 0.84 : 0.66);
+  const targetHeight = height * (width < 720 ? 0.42 : 0.57);
+  const scale = Math.min(targetWidth / sourceWidth, targetHeight / sourceHeight);
+  const sourceCenterX = (xExtent[0] + xExtent[1]) / 2;
+  const sourceCenterY = (yExtent[0] + yExtent[1]) / 2;
 
-  if (/^[\x20-\x7e]+$/.test(data)) {
-    state.input += data;
-    render();
-  }
+  return selected.map((point) => ({
+    x: width / 2 + (point.x - sourceCenterX) * scale,
+    y: height / 2 + (point.y - sourceCenterY) * scale,
+  }));
 }
 
-async function typeBoot(lines) {
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  for (const line of lines) {
-    state.bootLines.push("");
-    if (reducedMotion) {
-      state.bootLines[state.bootLines.length - 1] = line;
-      render();
+function buildSimulation() {
+  simulation?.stop();
+  simulation = forceSimulation(nodes)
+    .alphaDecay(0)
+    .velocityDecay(prefersReducedMotion.matches ? 0.34 : 0.2)
+    .force("charge", forceManyBody()
+      .strength((node) => (node.label ? -14 : -3.5))
+      .distanceMax(130))
+    .force("collision", forceCollide()
+      .radius((node) => (node.label ? 10 : node.radius + 1.5))
+      .strength(0.22))
+    .stop();
+}
+
+function resize() {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.round(width * pixelRatio);
+  canvas.height = Math.round(height * pixelRatio);
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+  context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  context.fillStyle = "#050508";
+  context.fillRect(0, 0, width, height);
+
+  nodes = createNodes(desiredNodeCount());
+  monogramTargets = sampleMonogram(nodes.length);
+  buildSimulation();
+  nodeCountElement.textContent = `${nodes.length} nodes`;
+}
+
+function constellationTarget(node, elapsed) {
+  const clusterAngle = (node.cluster / CONCEPTS.length) * TAU + elapsed * 0.000035;
+  const clusterRadiusX = width * (0.28 + Math.sin(elapsed * 0.00013) * 0.025);
+  const clusterRadiusY = height * (0.27 + Math.cos(elapsed * 0.00011) * 0.025);
+  const centerX = width / 2 + Math.cos(clusterAngle) * clusterRadiusX;
+  const centerY = height / 2 + Math.sin(clusterAngle * 1.13) * clusterRadiusY;
+  const localAngle = node.phase + elapsed * 0.00022 * (node.id % 2 === 0 ? 1 : -1);
+  const localRadius = 10 + (node.id % 9) * 4.2;
+
+  return [
+    centerX + Math.cos(localAngle) * localRadius,
+    centerY + Math.sin(localAngle) * localRadius,
+  ];
+}
+
+function identityTarget(node, elapsed) {
+  const target = monogramTargets[node.id % monogramTargets.length];
+  const breath = Math.sin(elapsed * 0.0014 + node.phase) * 2.5;
+  return [
+    target.x + Math.cos(node.phase) * breath,
+    target.y + Math.sin(node.phase) * breath,
+  ];
+}
+
+function signalTarget(node, elapsed) {
+  const columns = Math.max(10, Math.round(Math.sqrt(nodes.length * (width / height))));
+  const rows = Math.ceil(nodes.length / columns);
+  const column = node.id % columns;
+  const row = Math.floor(node.id / columns);
+  const normalizedX = (column + 0.5) / columns;
+  const normalizedY = (row + 0.5) / rows;
+  const wave = Math.sin(normalizedX * TAU * 2.2 + elapsed * 0.0012 + row * 0.5);
+  const counterWave = Math.cos(normalizedY * TAU * 1.7 - elapsed * 0.00085 + column * 0.21);
+
+  return [
+    width * (0.06 + normalizedX * 0.88) + counterWave * 18,
+    height * (0.09 + normalizedY * 0.82) + wave * height * 0.055,
+  ];
+}
+
+function flowTarget(node, elapsed) {
+  const normalized = (node.id + 0.5) / nodes.length;
+  const radius = Math.sqrt(normalized) * Math.min(width, height) * 0.49;
+  const angle = node.id * GOLDEN_ANGLE + elapsed * 0.00022 * (0.55 + node.seed);
+  const pulse = 1 + Math.sin(elapsed * 0.0007 + node.phase) * 0.07;
+
+  return [
+    width / 2 + Math.cos(angle) * radius * pulse * (width > height ? 1.32 : 0.92),
+    height / 2 + Math.sin(angle) * radius * pulse * 0.88,
+  ];
+}
+
+const TARGETS = [constellationTarget, identityTarget, signalTarget, flowTarget];
+
+function updatePhysics(elapsed) {
+  const phasePosition = elapsed / (prefersReducedMotion.matches ? PHASE_DURATION * 1.8 : PHASE_DURATION);
+  const phaseIndex = Math.floor(phasePosition) % PHASES.length;
+  const nextPhase = (phaseIndex + 1) % PHASES.length;
+  const phaseProgress = phasePosition % 1;
+  const transition = easeCubicInOut(clamp((phaseProgress - 0.56) / 0.44));
+  const targetStrength = prefersReducedMotion.matches ? 0.006 : 0.0115;
+
+  if (phaseIndex !== currentPhase) {
+    currentPhase = phaseIndex;
+    phaseElement.textContent = PHASES[phaseIndex];
+  }
+
+  pointer.energy += ((pointer.active ? 1 : 0) - pointer.energy) * 0.08;
+
+  for (const node of nodes) {
+    const from = TARGETS[phaseIndex](node, elapsed);
+    const to = TARGETS[nextPhase](node, elapsed);
+    const targetX = from[0] + (to[0] - from[0]) * transition;
+    const targetY = from[1] + (to[1] - from[1]) * transition;
+    const fieldAngle = Math.sin(node.y * 0.006 + elapsed * 0.00031 + node.phase)
+      + Math.cos(node.x * 0.004 - elapsed * 0.00024);
+    const fieldStrength = prefersReducedMotion.matches ? 0.004 : 0.022;
+
+    node.vx += (targetX - node.x) * targetStrength + Math.cos(fieldAngle * Math.PI) * fieldStrength;
+    node.vy += (targetY - node.y) * targetStrength + Math.sin(fieldAngle * Math.PI) * fieldStrength;
+
+    if (pointer.energy > 0.01) {
+      const deltaX = node.x - pointer.x;
+      const deltaY = node.y - pointer.y;
+      const distance = Math.hypot(deltaX, deltaY) || 1;
+      const radius = Math.min(width, height) * 0.24;
+
+      if (distance < radius) {
+        const force = (1 - distance / radius) ** 2 * pointer.energy * 2.8;
+        node.vx += (deltaX / distance) * force;
+        node.vy += (deltaY / distance) * force;
+      }
+    }
+
+    if (node.x < -30) node.vx += 0.8;
+    if (node.x > width + 30) node.vx -= 0.8;
+    if (node.y < -30) node.vy += 0.8;
+    if (node.y > height + 30) node.vy -= 0.8;
+  }
+
+  simulation.alpha(0.17).tick();
+  return { phaseIndex, nextPhase, transition };
+}
+
+function drawAtmosphere(elapsed) {
+  const centerX = width * 0.52;
+  const centerY = height * 0.5;
+  const minimumDimension = Math.min(width, height);
+
+  context.save();
+  context.globalCompositeOperation = "screen";
+  context.lineWidth = 0.7;
+
+  for (let ring = 0; ring < 11; ring += 1) {
+    const baseRadius = minimumDimension * (0.12 + ring * 0.045);
+    context.beginPath();
+
+    for (let point = 0; point <= 96; point += 1) {
+      const angle = (point / 96) * TAU;
+      const distortion = Math.sin(angle * 3 + elapsed * 0.00034 + ring * 0.72) * 8
+        + Math.cos(angle * 5 - elapsed * 0.00019 + ring) * 4;
+      const radius = baseRadius + distortion;
+      const x = centerX + Math.cos(angle) * radius * (width > height ? 1.45 : 0.98);
+      const y = centerY + Math.sin(angle) * radius * 0.82;
+
+      if (point === 0) context.moveTo(x, y);
+      else context.lineTo(x, y);
+    }
+
+    context.closePath();
+    context.strokeStyle = rgba(ring % 3 === 0 ? 2 : 1, 0.025 + ring * 0.0015);
+    context.stroke();
+  }
+
+  const pulseProgress = (elapsed % 5_200) / 5_200;
+  const pulseRadius = minimumDimension * (0.08 + pulseProgress * 0.58);
+  context.beginPath();
+  context.arc(centerX, centerY, pulseRadius, 0, TAU);
+  context.strokeStyle = rgba(0, (1 - pulseProgress) * 0.12);
+  context.lineWidth = 1;
+  context.stroke();
+  context.restore();
+}
+
+function edgeControlPoint(source, target, elapsed) {
+  const deltaX = target.x - source.x;
+  const deltaY = target.y - source.y;
+  const distance = Math.hypot(deltaX, deltaY) || 1;
+  const bend = Math.sin(elapsed * 0.00045 + source.id * 0.71 + target.id * 0.37)
+    * Math.min(16, distance * 0.09);
+  return {
+    x: (source.x + target.x) / 2 - (deltaY / distance) * bend,
+    y: (source.y + target.y) / 2 + (deltaX / distance) * bend,
+  };
+}
+
+function quadraticPoint(source, control, target, progress) {
+  const inverse = 1 - progress;
+  return {
+    x: inverse * inverse * source.x + 2 * inverse * progress * control.x + progress * progress * target.x,
+    y: inverse * inverse * source.y + 2 * inverse * progress * control.y + progress * progress * target.y,
+  };
+}
+
+function collectEdges() {
+  const delaunay = Delaunay.from(nodes, (node) => node.x, (node) => node.y);
+  const maximumDistance = width < 720 ? 105 : 155;
+  const edges = [];
+
+  for (let sourceIndex = 0; sourceIndex < nodes.length; sourceIndex += 1) {
+    for (const targetIndex of delaunay.neighbors(sourceIndex)) {
+      if (targetIndex <= sourceIndex) continue;
+      const source = nodes[sourceIndex];
+      const target = nodes[targetIndex];
+      const distance = Math.hypot(target.x - source.x, target.y - source.y);
+      if (distance < maximumDistance) edges.push({ source, target, distance, maximumDistance });
+    }
+  }
+
+  return edges;
+}
+
+function drawEdges(edges, elapsed) {
+  context.save();
+  context.globalCompositeOperation = "screen";
+  context.lineWidth = 0.72;
+
+  edges.forEach((edge, index) => {
+    const control = edgeControlPoint(edge.source, edge.target, elapsed);
+    const alpha = (1 - edge.distance / edge.maximumDistance) * 0.24;
+    context.beginPath();
+    context.moveTo(edge.source.x, edge.source.y);
+    context.quadraticCurveTo(control.x, control.y, edge.target.x, edge.target.y);
+    context.strokeStyle = rgba(edge.source.cluster, alpha);
+    context.stroke();
+
+    if ((edge.source.id * 7 + edge.target.id * 11 + index) % 13 === 0) {
+      const progress = (elapsed * 0.00018 + edge.source.seed + index * 0.031) % 1;
+      const point = quadraticPoint(edge.source, control, edge.target, progress);
+      context.beginPath();
+      context.arc(point.x, point.y, 1.15, 0, TAU);
+      context.fillStyle = rgba(edge.target.cluster, 0.92);
+      context.fill();
+    }
+  });
+
+  context.restore();
+}
+
+function drawNodes(elapsed, topologyOpacity) {
+  context.save();
+  context.globalCompositeOperation = "screen";
+
+  for (const node of nodes) {
+    const shimmer = 0.58 + Math.sin(elapsed * 0.002 + node.phase) * 0.22;
+    context.beginPath();
+    context.arc(node.x, node.y, node.radius, 0, TAU);
+    context.fillStyle = rgba(node.cluster, shimmer);
+    context.fill();
+  }
+
+  context.font = '500 11px "Helvetica Neue", Arial, sans-serif';
+  context.textBaseline = "middle";
+  context.letterSpacing = "0.08em";
+
+  for (const node of nodes) {
+    if (!node.label || topologyOpacity < 0.03) continue;
+    context.beginPath();
+    context.arc(node.x, node.y, 4.2, 0, TAU);
+    context.fillStyle = rgba(node.cluster, 0.92 * topologyOpacity);
+    context.shadowBlur = 18;
+    context.shadowColor = rgba(node.cluster, 0.9 * topologyOpacity);
+    context.fill();
+    context.shadowBlur = 0;
+    context.fillStyle = `rgba(232, 237, 234, ${0.72 * topologyOpacity})`;
+    context.fillText(node.label, node.x + 10, node.y + 0.5);
+  }
+
+  context.restore();
+}
+
+function drawBursts(elapsed) {
+  for (let index = bursts.length - 1; index >= 0; index -= 1) {
+    const burst = bursts[index];
+    const progress = (elapsed - burst.startedAt) / 1_350;
+    if (progress >= 1) {
+      bursts.splice(index, 1);
       continue;
     }
 
-    for (let index = 1; index <= line.length; index += 1) {
-      state.bootLines[state.bootLines.length - 1] = line.slice(0, index);
-      render();
-      await sleep(5);
-    }
+    context.save();
+    context.globalCompositeOperation = "screen";
+    context.beginPath();
+    context.arc(burst.x, burst.y, easeCubicInOut(progress) * Math.min(width, height) * 0.3, 0, TAU);
+    context.strokeStyle = rgba(burst.color, (1 - progress) * 0.42);
+    context.lineWidth = 1.2;
+    context.stroke();
+    context.restore();
   }
 }
 
-async function autoTypeCommand(command) {
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  state.autoTyping = true;
-  state.input = "";
-  await sleep(260);
+function render(elapsed) {
+  animationElapsed = elapsed;
+  const fade = prefersReducedMotion.matches ? 0.68 : 0.27;
+  context.save();
+  context.globalCompositeOperation = "source-over";
+  context.fillStyle = `rgba(5, 5, 8, ${fade})`;
+  context.fillRect(0, 0, width, height);
 
-  if (reducedMotion) {
-    state.input = command;
-    render();
-    await sleep(100);
-  } else {
-    for (const character of command) {
-      state.input += character;
-      render();
-      await sleep(46);
-    }
-    await sleep(180);
-  }
+  const haloX = pointer.active ? pointer.x : width * (0.55 + Math.sin(elapsed * 0.00012) * 0.08);
+  const haloY = pointer.active ? pointer.y : height * (0.48 + Math.cos(elapsed * 0.00015) * 0.08);
+  const halo = context.createRadialGradient(haloX, haloY, 0, haloX, haloY, Math.min(width, height) * 0.48);
+  halo.addColorStop(0, "rgba(98, 232, 255, 0.035)");
+  halo.addColorStop(0.45, "rgba(145, 112, 255, 0.018)");
+  halo.addColorStop(1, "rgba(5, 5, 8, 0)");
+  context.fillStyle = halo;
+  context.fillRect(0, 0, width, height);
+  context.restore();
 
-  state.autoTyping = false;
-  submitCommand();
+  const phase = updatePhysics(elapsed);
+  const edges = collectEdges();
+  const topologyOpacity = phase.phaseIndex === 0
+    ? 1 - phase.transition
+    : phase.nextPhase === 0
+      ? phase.transition
+      : 0;
+
+  drawAtmosphere(elapsed);
+  drawEdges(edges, elapsed);
+  drawNodes(elapsed, topologyOpacity);
+  drawBursts(elapsed);
 }
 
-worker.addEventListener("message", ({ data }) => {
-  if (data.type === "ready") {
-    state.workerReady = true;
-    state.model = data.model;
-    state.initMs = data.initMs;
-    state.memoryBytes = data.memoryBytes;
-    void (async () => {
-      await typeBoot(data.bootLines);
-      state.booting = false;
-      addLog("[wasm] decoder ready / scheduling identity prompt");
-      render();
-      terminal.focus();
-      await autoTypeCommand("infer identity.weights --trace");
-    })();
-    return;
-  }
-
-  if (data.type === "frame") {
-    state.frame = data.frame;
-    state.rateFrames += 1;
-    const rateNow = performance.now();
-    const rateElapsed = rateNow - state.rateWindowAt;
-    if (rateElapsed >= 350) {
-      state.inferenceHz = Math.round((state.rateFrames * 1_000) / rateElapsed);
-      state.rateFrames = 0;
-      state.rateWindowAt = rateNow;
-    }
-    const contributionCount = Math.max(1, data.frame.contributions.length);
-    const positive = Math.sqrt(data.frame.contributions.reduce(
-      (sum, value) => sum + (value > 0 ? value * value : 0),
-      0,
-    ) / contributionCount) / 112;
-    const negative = Math.sqrt(data.frame.contributions.reduce(
-      (sum, value) => sum + (value < 0 ? value * value : 0),
-      0,
-    ) / contributionCount) / 112;
-    state.activationHistory.push({
-      positive: clamp(positive, 0, 1),
-      negative: clamp(negative, 0, 1),
-    });
-    if (state.activationHistory.length > 1_024) state.activationHistory.shift();
-    state.blockEnergy[data.frame.block] = clamp(data.frame.energy * 1.9, 0, 1);
-    if (data.frame.emitted) {
-      state.decoded += data.frame.emitted;
-      state.emittedTokens.push({
-        value: data.frame.emitted,
-        dominant: data.frame.dominant,
-        energy: data.frame.energy,
-      });
-      if (state.emittedTokens.length > 32) state.emittedTokens.shift();
-    }
-    render();
-    return;
-  }
-
-  if (data.type === "complete") {
-    state.running = false;
-    state.complete = true;
-    state.elapsedMs = data.elapsedMs;
-    addLog(
-      `[wasm] eos / ${state.model.tokenCount} tokens / ${(data.elapsedMs / 1_000).toFixed(2)}s staged trace`,
-    );
-    render();
-    return;
-  }
-
-  if (data.type === "error") {
-    state.booting = false;
-    state.running = false;
-    addLog(`error: wasm inference failed: ${data.message}`);
-    render();
-  }
+window.addEventListener("pointermove", (event) => {
+  pointer.x = event.clientX;
+  pointer.y = event.clientY;
+  pointer.active = true;
 });
 
-worker.addEventListener("error", (event) => {
-  state.booting = false;
-  state.running = false;
-  addLog(`error: inference worker failed: ${event.message}`);
-  render();
+window.addEventListener("pointerleave", () => {
+  pointer.active = false;
 });
 
-terminal.onData(handleInput);
-terminalElement.addEventListener("pointerdown", () => terminal.focus());
-function fitTerminal() {
-  const fontSize = window.innerWidth < 680 ? 11 : 13;
-  if (terminal.options.fontSize !== fontSize) terminal.options.fontSize = fontSize;
-  fitAddon.fit();
-}
+window.addEventListener("pointerdown", (event) => {
+  bursts.push({
+    x: event.clientX,
+    y: event.clientY,
+    startedAt: animationElapsed,
+    color: Math.floor((event.clientX / Math.max(1, width)) * PALETTE.length),
+  });
+});
 
 window.addEventListener("resize", () => {
-  fitTerminal();
-  render();
+  window.cancelAnimationFrame(resizeRequest);
+  resizeRequest = window.requestAnimationFrame(resize);
 });
-window.addEventListener("beforeunload", () => worker.terminate());
 
-fitTerminal();
-render();
+resize();
+timer(render);
