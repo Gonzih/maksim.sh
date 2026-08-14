@@ -6,6 +6,15 @@
   "updated": "2026-08-14",
   "canonical": "https://maksim.sh/",
   "generated_by": "scripts/generate-knowledge.mjs",
+  "counts": {
+    "protocols": 13,
+    "protocol_statuses": {
+      "stable": 8,
+      "experimental": 4,
+      "research": 1
+    },
+    "evidence_claims": 9
+  },
   "entrypoints": [
     {
       "rel": "llms-index",

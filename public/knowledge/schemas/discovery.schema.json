@@ -3,7 +3,7 @@
   "$id": "https://maksim.sh/knowledge/schemas/discovery.schema.json",
   "title": "maksim.sh Machine Discovery Index",
   "type": "object",
-  "required": ["$schema", "id", "type", "version", "updated", "canonical", "entrypoints", "aliases", "capabilities"],
+  "required": ["$schema", "id", "type", "version", "updated", "canonical", "counts", "entrypoints", "aliases", "capabilities"],
   "properties": {
     "$schema": { "const": "https://maksim.sh/knowledge/schemas/discovery.schema.json" },
     "id": { "const": "https://maksim.sh/index.json" },
@@ -12,6 +12,7 @@
     "updated": { "type": "string", "format": "date" },
     "canonical": { "const": "https://maksim.sh/" },
     "generated_by": { "type": "string" },
+    "counts": { "type": "object" },
     "entrypoints": {
       "type": "array",
       "minItems": 1,

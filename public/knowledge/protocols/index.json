@@ -3,6 +3,7 @@
   "type": "ProtocolCollection",
   "version": "1.0.0",
   "updated": "2026-08-14",
+  "protocol_count": 13,
   "schema": "https://maksim.sh/knowledge/schemas/protocol.schema.json",
   "description": "Composable knowledge-engineering protocols. Load only the protocols relevant to the task; do not inject the complete collection by default.",
   "default_pipeline": [

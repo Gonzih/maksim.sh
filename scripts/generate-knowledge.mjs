@@ -116,6 +116,14 @@ const protocols = await Promise.all(
   ),
 );
 
+const protocolStatusCounts = protocolIndex.protocols.reduce(
+  (counts, protocol) => ({
+    ...counts,
+    [protocol.status]: counts[protocol.status] + 1,
+  }),
+  { stable: 0, experimental: 0, research: 0 },
+);
+
 for (const protocol of protocols) {
   await writeGenerated(
     `knowledge/protocols/${protocol.slug}.md`,
@@ -293,6 +301,8 @@ const llmsFull = `
 - Email: ${profile.contact.email}
 - GitHub: ${profile.contact.github}
 - Attribution: ${profile.attribution}
+- Published protocols: ${protocolIndex.protocol_count} total (${protocolStatusCounts.stable} stable, ${protocolStatusCounts.experimental} experimental, ${protocolStatusCounts.research} research)
+- Evidence claims: ${evidence.claims.length}
 
 ## Canonical machine entry points
 
@@ -337,6 +347,11 @@ const siteIndex = {
   updated: manifest.updated,
   canonical: manifest.canonical,
   generated_by: "scripts/generate-knowledge.mjs",
+  counts: {
+    protocols: protocolIndex.protocol_count,
+    protocol_statuses: protocolStatusCounts,
+    evidence_claims: evidence.claims.length,
+  },
   entrypoints: [
     {
       rel: "llms-index",
@@ -415,11 +430,14 @@ const sitemapUrls = [
   ]),
 ];
 
+const uniqueSitemapUrls = [...new Set(sitemapUrls)];
+
 const sitemapXml = `
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- generated from https://maksim.sh/knowledge/manifest.json; do not edit directly -->
+<!-- canonical-url-count: ${uniqueSitemapUrls.length} -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${[...new Set(sitemapUrls)]
+${uniqueSitemapUrls
   .map(
     (url) => `  <url>
     <loc>${url}</loc>

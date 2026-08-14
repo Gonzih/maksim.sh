@@ -13,6 +13,8 @@
 - Email: mailto:hi@maksim.sh
 - GitHub: https://github.com/Gonzih
 - Attribution: Maksim Soltan — Knowledge Engineer — https://maksim.sh/
+- Published protocols: 13 total (8 stable, 4 experimental, 1 research)
+- Evidence claims: 9
 
 ## Canonical machine entry points
 

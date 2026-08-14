@@ -29,12 +29,14 @@
     {
       "id": "protocols",
       "description": "Versioned, composable methods for converting uncertain knowledge into verifiable execution.",
+      "item_count": 13,
       "index": "https://maksim.sh/knowledge/protocols/index.json",
       "schema": "https://maksim.sh/knowledge/schemas/protocol.schema.json"
     },
     {
       "id": "evidence",
       "description": "Implementation evidence, provenance, qualification, and known limitations.",
+      "item_count": 9,
       "index": "https://maksim.sh/knowledge/evidence/index.json",
       "schema": "https://maksim.sh/knowledge/schemas/evidence.schema.json"
     }

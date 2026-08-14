@@ -74,9 +74,17 @@ if (!manifest || !profile || !protocolIndex || !evidence || !siteIndex) {
   if (profile.name !== "Maksim Soltan") fail("Profile identity is incorrect.");
   if (profile.contact.email !== "mailto:hi@maksim.sh") fail("Profile contact email is incorrect.");
   if (protocolIndex.protocols.length !== 13) fail("Protocol index must contain exactly 13 protocols in v1.");
+  if (protocolIndex.protocol_count !== protocolIndex.protocols.length) fail("Protocol count does not match the protocol array.");
   if (!Array.isArray(evidence.claims) || evidence.claims.length === 0) fail("Evidence index has no claims.");
   if (siteIndex.id !== "https://maksim.sh/index.json") fail("Machine discovery index URL is incorrect.");
   if (siteIndex.type !== "MachineDiscoveryIndex") fail("Machine discovery index type is incorrect.");
+  if (siteIndex.counts?.protocols !== protocolIndex.protocols.length) fail("Machine discovery protocol count is incorrect.");
+  if (siteIndex.counts?.evidence_claims !== evidence.claims.length) fail("Machine discovery evidence count is incorrect.");
+
+  const manifestProtocolCollection = manifest.collections.find(({ id }) => id === "protocols");
+  const manifestEvidenceCollection = manifest.collections.find(({ id }) => id === "evidence");
+  if (manifestProtocolCollection?.item_count !== protocolIndex.protocols.length) fail("Manifest protocol count is incorrect.");
+  if (manifestEvidenceCollection?.item_count !== evidence.claims.length) fail("Manifest evidence count is incorrect.");
 
   const indexedEntrypoints = new Set(siteIndex.entrypoints?.map(({ url }) => url));
   for (const url of [
@@ -202,6 +210,10 @@ const sitemapUrls = new Set(
     ([, url]) => url,
   ),
 );
+
+if (!sitemapContent.includes(`<!-- canonical-url-count: ${sitemapUrls.size} -->`)) {
+  fail("sitemap.xml has a missing or incorrect explicit URL count.");
+}
 
 for (const url of [
   manifest?.canonical,
