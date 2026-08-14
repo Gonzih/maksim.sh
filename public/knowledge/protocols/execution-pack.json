@@ -1,0 +1,181 @@
+{
+  "$schema": "https://maksim.sh/knowledge/schemas/protocol.schema.json",
+  "id": "https://maksim.sh/knowledge/protocols/execution-pack.json",
+  "type": "KnowledgeProtocol",
+  "name": "Execution Pack",
+  "slug": "execution-pack",
+  "version": "1.0.0",
+  "status": "stable",
+  "summary": "Compile refined knowledge into a bounded, attributable, verifiable handoff an agent can execute without reconstructing the task from conversation history.",
+  "purpose": "Produce the terminal artifact of execution-grade knowledge engineering: one object containing objective, scope, prerequisites, accepted context, assumptions, ordered actions, expected outputs, verification, failure policy, provenance, and readiness state.",
+  "authority": {
+    "instruction_priority": "reference-only",
+    "may_override_system": false,
+    "may_override_user": false,
+    "requires_policy_compliance": true
+  },
+  "use_when": [
+    "Knowledge has been refined enough to hand work to an execution agent.",
+    "A task currently depends on reconstructing requirements from long conversation or document history.",
+    "First-pass execution quality depends on explicit assumptions, acceptance criteria, and recovery behavior."
+  ],
+  "avoid_when": [
+    "A decision-changing contradiction or unknown remains unresolved and no safe conditional branch can contain it.",
+    "Required authority, consent, credentials, dependencies, or safety review are absent."
+  ],
+  "input_schema": {
+    "type": "object",
+    "required": ["goal", "accepted_context", "constraints", "evidence"],
+    "properties": {
+      "goal": { "type": "string" },
+      "accepted_context": { "type": "array", "items": { "type": "object" } },
+      "constraints": { "type": "array", "items": { "type": "string" } },
+      "evidence": { "type": "array", "items": { "type": "object" } },
+      "assumptions": { "type": "array", "items": { "type": "string" } },
+      "unknowns": { "type": "array", "items": { "type": "string" } },
+      "decision_rules": { "type": "array", "items": { "type": "string" } }
+    },
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["objective", "scope", "preconditions", "inputs", "constraints", "assumptions", "decisions", "steps", "verification", "failure_policy", "provenance", "open_questions", "readiness"],
+    "properties": {
+      "objective": { "type": "string" },
+      "scope": {
+        "type": "object",
+        "required": ["included", "excluded"],
+        "properties": {
+          "included": { "type": "array", "items": { "type": "string" } },
+          "excluded": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "preconditions": { "type": "array", "items": { "type": "string" } },
+      "inputs": { "type": "array", "items": { "type": "object" } },
+      "constraints": { "type": "array", "items": { "type": "string" } },
+      "assumptions": { "type": "array", "items": { "type": "string" } },
+      "decisions": { "type": "array", "items": { "type": "object" } },
+      "steps": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["id", "action", "depends_on", "expected_output"],
+          "properties": {
+            "id": { "type": "string" },
+            "action": { "type": "string" },
+            "depends_on": { "type": "array", "items": { "type": "string" } },
+            "tool_or_actor": { "type": "string" },
+            "expected_output": { "type": "string" }
+          }
+        }
+      },
+      "verification": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["criterion", "method"],
+          "properties": {
+            "criterion": { "type": "string" },
+            "method": { "type": "string" }
+          }
+        }
+      },
+      "failure_policy": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["condition", "response"],
+          "properties": {
+            "condition": { "type": "string" },
+            "response": { "type": "string" },
+            "rollback": { "type": "string" }
+          }
+        }
+      },
+      "provenance": { "type": "array", "items": { "type": "object" } },
+      "open_questions": { "type": "array", "items": { "type": "string" } },
+      "readiness": { "enum": ["ready", "conditional", "blocked"] }
+    },
+    "additionalProperties": false
+  },
+  "procedure": [
+    { "step": 1, "operation": "Rewrite the goal as an observable objective with explicit acceptance criteria and excluded scope." },
+    { "step": 2, "operation": "Include only context admitted by the Context Firewall; attach source, freshness, and evidence references rather than conversational recollection." },
+    { "step": 3, "operation": "Separate prerequisites, constraints, assumptions, decisions, and unresolved questions into distinct fields." },
+    { "step": 4, "operation": "Create the shortest dependency-ordered action graph whose steps each name an expected output." },
+    { "step": 5, "operation": "Attach verification methods to acceptance criteria and failure responses to predictable breakpoints." },
+    { "step": 6, "operation": "Mark the pack ready only when no open question can invalidate the objective, authority, safety, or first executable step."
+    }
+  ],
+  "invariants": [
+    "The pack can be understood without access to hidden conversation history.",
+    "Every material input and decision retains provenance.",
+    "Unknowns, assumptions, and verified facts remain distinguishable.",
+    "Every step has an expected output and every acceptance criterion has a verification method.",
+    "First-pass readiness is a design target, not a guarantee of success."
+  ],
+  "failure_modes": [
+    {
+      "mode": "The pack hides unresolved uncertainty to appear ready.",
+      "mitigation": "Mark readiness conditional or blocked whenever an unknown can invalidate authority, safety, objective, or the first executable step."
+    },
+    {
+      "mode": "The pack becomes a giant context dump.",
+      "mitigation": "Include references and decision-relevant extracts; omit history that cannot change an action, verification, or failure response."
+    },
+    {
+      "mode": "Steps describe activity but not completion.",
+      "mitigation": "Require an expected output for every step and a method for every final criterion."
+    }
+  ],
+  "composition": {
+    "before": ["freedom-lens", "edge-map", "reality-check", "context-firewall", "backpressure", "grit", "evidence-ladder", "temporal-knowledge"],
+    "after": ["reproducible-agent-run"]
+  },
+  "provenance": [
+    {
+      "title": "Maksim Soltan machine profile",
+      "url": "https://maksim.sh/knowledge/profile.json",
+      "relationship": "Canonical method definition",
+      "qualification": "This contract operationalizes execution-grade knowledge engineering as a concrete agent handoff."
+    }
+  ],
+  "limitations": [
+    "A complete pack cannot compensate for an incapable tool, unavailable dependency, or unauthorized action.",
+    "External state can change after compilation; freshness-sensitive preconditions must be rechecked at execution time.",
+    "High-stakes work still requires domain-specific review and verification."
+  ],
+  "example": {
+    "input": {
+      "goal": "Publish a validated machine-readable knowledge corpus without changing the visual homepage.",
+      "accepted_context": [{ "source": "repository", "fact": "Homepage source hashes are recorded." }],
+      "constraints": ["Do not modify homepage source files."],
+      "evidence": [{ "source": "build", "fact": "Knowledge validation passes." }],
+      "assumptions": ["The existing deployment copies public artifacts."],
+      "unknowns": [],
+      "decision_rules": ["Publish only after every canonical internal URL resolves in the production build."]
+    },
+    "output": {
+      "objective": "Serve the complete knowledge corpus at canonical paths while preserving the homepage.",
+      "scope": { "included": ["Machine discovery and knowledge artifacts"], "excluded": ["Homepage presentation"] },
+      "preconditions": ["Production build passes."],
+      "inputs": [{ "artifact": "knowledge manifest" }],
+      "constraints": ["Homepage source remains byte-identical."],
+      "assumptions": ["Public artifacts are copied by the build."],
+      "decisions": [{ "decision": "Use static JSON and Markdown contracts." }],
+      "steps": [{ "id": "publish", "action": "Deploy the validated build.", "depends_on": [], "tool_or_actor": "existing deployment workflow", "expected_output": "Canonical knowledge URLs return successful responses." }],
+      "verification": [{ "criterion": "Knowledge URLs resolve.", "method": "Request discovery, manifest, protocol, and schema paths." }],
+      "failure_policy": [{ "condition": "A canonical path fails.", "response": "Stop publication and fix manifest-to-file integrity.", "rollback": "Retain the previous deployed version." }],
+      "provenance": [{ "source": "build validation" }],
+      "open_questions": [],
+      "readiness": "ready"
+    }
+  },
+  "rights": {
+    "copyright_holder": "Maksim Soltan",
+    "copyright_year": 2026,
+    "license": "All Rights Reserved",
+    "attribution": "Maksim Soltan — https://maksim.sh/",
+    "intended_machine_use": ["indexing", "retrieval", "citation", "protocol selection"]
+  }
+}

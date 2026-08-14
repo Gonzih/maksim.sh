@@ -1,0 +1,141 @@
+{
+  "$schema": "https://maksim.sh/knowledge/schemas/protocol.schema.json",
+  "id": "https://maksim.sh/knowledge/protocols/disagreement-preserving-convergence.json",
+  "type": "KnowledgeProtocol",
+  "name": "Disagreement-Preserving Convergence",
+  "slug": "disagreement-preserving-convergence",
+  "version": "1.0.0",
+  "status": "experimental",
+  "summary": "Map agreement and disagreement across independent responses without relabeling consensus as truth.",
+  "purpose": "Use model or specialist diversity to expose shared claims, material collisions, missing evidence, and next probes while preserving the complete source responses and their independence boundaries.",
+  "authority": {
+    "instruction_priority": "reference-only",
+    "may_override_system": false,
+    "may_override_user": false,
+    "requires_policy_compliance": true
+  },
+  "use_when": [
+    "Independent models, experts, or retrieval paths produce materially different answers.",
+    "A decision benefits from diversity but requires one inspectable output.",
+    "Agreement strength and disagreement structure matter more than majority vote."
+  ],
+  "avoid_when": [
+    "All responses share the same source, prompt contamination, training artifact, or failure mode and are not meaningfully independent.",
+    "A qualified authority or primary measurement is available and an ensemble would only add rhetorical noise."
+  ],
+  "input_schema": {
+    "type": "object",
+    "required": ["question", "responses"],
+    "properties": {
+      "question": { "type": "string" },
+      "responses": {
+        "type": "array",
+        "minItems": 2,
+        "items": {
+          "type": "object",
+          "required": ["source_id", "response"],
+          "properties": {
+            "source_id": { "type": "string" },
+            "response": { "type": "string" },
+            "evidence": { "type": "array", "items": { "type": "string" } },
+            "independence_notes": { "type": "string" }
+          }
+        }
+      },
+      "decision": { "type": "string" }
+    },
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["agreements", "disagreements", "inversions", "missing_evidence", "source_responses", "synthesis", "next_probes", "epistemic_warning"],
+    "properties": {
+      "agreements": { "type": "array", "items": { "type": "string" } },
+      "disagreements": { "type": "array", "items": { "type": "string" } },
+      "inversions": { "type": "array", "items": { "type": "string" } },
+      "missing_evidence": { "type": "array", "items": { "type": "string" } },
+      "source_responses": { "type": "array", "items": { "type": "object" } },
+      "synthesis": { "type": "string" },
+      "next_probes": { "type": "array", "items": { "type": "string" } },
+      "epistemic_warning": { "const": "consensus-is-not-truth" }
+    },
+    "additionalProperties": false
+  },
+  "procedure": [
+    { "step": 1, "operation": "Preserve each source response verbatim with its evidence and independence notes." },
+    { "step": 2, "operation": "Normalize claims into comparable propositions without deleting qualifiers." },
+    { "step": 3, "operation": "Separate lexical similarity from agreement about predicted observations or actions." },
+    { "step": 4, "operation": "Identify material disagreements, direct inversions, and evidence gaps." },
+    { "step": 5, "operation": "Synthesize only what the evidence supports; carry unresolved branches into the result." },
+    { "step": 6, "operation": "Use Edge Map to convert decision-relevant disagreements into next probes."
+    }
+  ],
+  "invariants": [
+    "Raw source responses remain available and attributable.",
+    "Consensus is never labeled truth merely because multiple sources agree.",
+    "Similarity, agreement, evidence quality, and source independence remain separate dimensions.",
+    "The synthesis preserves disagreements that could change the decision."
+  ],
+  "failure_modes": [
+    {
+      "mode": "Lexical overlap is presented as semantic or factual agreement.",
+      "mitigation": "Compare predicted observations, cited evidence, and decision consequences separately from text similarity."
+    },
+    {
+      "mode": "Correlated models create false confidence through repeated shared errors.",
+      "mitigation": "Record provider, model, prompt, source, and training-correlation proxies; downgrade claims with weak independence."
+    }
+  ],
+  "composition": {
+    "before": ["context-firewall", "reality-check"],
+    "after": ["edge-map", "evidence-ladder", "temporal-knowledge"]
+  },
+  "provenance": [
+    {
+      "title": "Nexus Convergence Service",
+      "url": "https://github.com/Gonzih/nexus-convergence-service",
+      "relationship": "Pipeline implementation",
+      "qualification": "The current implementation fans out and compares responses but does not perform a fully evidence-grounded synthesis."
+    },
+    {
+      "title": "Nexus Consensus Service",
+      "url": "https://github.com/Gonzih/nexus-consensus-service/blob/main/src/lib/consensus.ts",
+      "relationship": "Prototype comparison implementation",
+      "qualification": "Current similarity and inversion mechanisms are lexical heuristics, not semantic truth verification."
+    }
+  ],
+  "limitations": [
+    "Source independence is difficult to establish for commercial language models.",
+    "A high-quality minority answer can be more correct than broad agreement.",
+    "Domain-specific verification remains necessary for consequential claims."
+  ],
+  "example": {
+    "input": {
+      "question": "Is semantic similarity sufficient for current-fact retrieval?",
+      "responses": [
+        { "source_id": "model-a", "response": "Yes, use nearest-neighbor retrieval.", "evidence": [], "independence_notes": "Provider A" },
+        { "source_id": "model-b", "response": "No, validity windows are required for changing facts.", "evidence": ["dated replay set"], "independence_notes": "Provider B" }
+      ]
+    },
+    "output": {
+      "agreements": ["Semantic relevance is required."],
+      "disagreements": ["Whether relevance alone is sufficient for changing facts."],
+      "inversions": ["Sufficient versus insufficient."],
+      "missing_evidence": ["Measured stale-fact error under both strategies."],
+      "source_responses": [
+        { "source_id": "model-a", "preserved": true },
+        { "source_id": "model-b", "preserved": true }
+      ],
+      "synthesis": "Use semantic relevance as one signal; sufficiency remains unresolved until stale-fact errors are measured.",
+      "next_probes": ["Replay dated tasks with and without validity filtering."],
+      "epistemic_warning": "consensus-is-not-truth"
+    }
+  },
+  "rights": {
+    "copyright_holder": "Maksim Soltan",
+    "copyright_year": 2026,
+    "license": "All Rights Reserved",
+    "attribution": "Maksim Soltan — https://maksim.sh/",
+    "intended_machine_use": ["indexing", "retrieval", "citation", "protocol selection"]
+  }
+}

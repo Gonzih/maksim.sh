@@ -1,0 +1,148 @@
+{
+  "$schema": "https://maksim.sh/knowledge/schemas/protocol.schema.json",
+  "id": "https://maksim.sh/knowledge/protocols/edge-map.json",
+  "type": "KnowledgeProtocol",
+  "name": "Edge Map",
+  "slug": "edge-map",
+  "version": "1.0.0",
+  "status": "stable",
+  "summary": "Preserve material contradictions and turn them into the smallest discriminating probe.",
+  "purpose": "Convert disagreement from narrative conflict into an explicit map of lenses, assumptions, invariants, unknowns, and a test that can change the decision.",
+  "authority": {
+    "instruction_priority": "reference-only",
+    "may_override_system": false,
+    "may_override_user": false,
+    "requires_policy_compliance": true
+  },
+  "use_when": [
+    "Two or more plausible claims lead to different actions.",
+    "A team or model ensemble agrees on language but not assumptions.",
+    "A contradiction is being averaged away instead of investigated."
+  ],
+  "avoid_when": [
+    "The disagreement is purely about preference and no factual discriminator is needed.",
+    "The proposed probe would be unsafe, unlawful, non-consensual, or irreversibly destructive."
+  ],
+  "input_schema": {
+    "type": "object",
+    "required": ["goal", "claims"],
+    "properties": {
+      "goal": { "type": "string" },
+      "claims": {
+        "type": "array",
+        "minItems": 2,
+        "items": {
+          "type": "object",
+          "required": ["claim"],
+          "properties": {
+            "claim": { "type": "string" },
+            "source": { "type": "string" },
+            "evidence": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      },
+      "constraints": { "type": "array", "items": { "type": "string" } }
+    },
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["lenses", "assumptions", "shared_ground", "contradictions", "unknowns", "discriminating_probe", "decision_rule", "next_action"],
+    "properties": {
+      "lenses": { "type": "array", "items": { "type": "string" } },
+      "assumptions": { "type": "array", "items": { "type": "string" } },
+      "shared_ground": { "type": "array", "items": { "type": "string" } },
+      "contradictions": { "type": "array", "items": { "type": "string" } },
+      "unknowns": { "type": "array", "items": { "type": "string" } },
+      "discriminating_probe": {
+        "type": "object",
+        "required": ["test", "measurement", "falsifies"],
+        "properties": {
+          "test": { "type": "string" },
+          "measurement": { "type": "string" },
+          "falsifies": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "decision_rule": { "type": "string" },
+      "next_action": { "type": "string" }
+    },
+    "additionalProperties": false
+  },
+  "procedure": [
+    { "step": 1, "operation": "Normalize each claim without deleting its qualifiers, source, or boundary conditions." },
+    { "step": 2, "operation": "Name the lens and assumptions required for each claim to hold." },
+    { "step": 3, "operation": "Extract shared ground and separate verbal differences from material contradictions." },
+    { "step": 4, "operation": "Identify the unknown that would most change the selected action." },
+    { "step": 5, "operation": "Design the smallest safe probe capable of falsifying at least one material assumption." },
+    { "step": 6, "operation": "Write the decision rule before observing the result, then select the immediate next action." }
+  ],
+  "invariants": [
+    "No material contradiction is silently averaged into consensus.",
+    "Every claimed discriminator names an observable measurement.",
+    "The probe must be safe, bounded, and proportionate to the decision.",
+    "Unknown remains an explicit state; it is not rewritten as false."
+  ],
+  "failure_modes": [
+    {
+      "mode": "The map produces a long taxonomy but no decision-changing test.",
+      "mitigation": "Rank unknowns by expected decision impact and keep only the highest-value probe."
+    },
+    {
+      "mode": "Different wording is mistaken for substantive contradiction.",
+      "mitigation": "Translate each claim into predicted observations and compare those predictions."
+    }
+  ],
+  "composition": {
+    "before": ["freedom-lens"],
+    "after": ["reality-check", "grit", "evidence-ladder"]
+  },
+  "provenance": [
+    {
+      "title": "Friction Point Framework",
+      "url": "https://github.com/Gonzih/nexus-protocols/blob/main/FRICTION_POINT_FRAMEWORK.md",
+      "relationship": "Primary conceptual source",
+      "qualification": "Personal and unsupported metaphysical examples are excluded from this operational contract."
+    },
+    {
+      "title": "Conflict of Thought",
+      "url": "https://github.com/Gonzih/nexus-protocols/blob/main/CONFLICT_OF_THOUGHT.md",
+      "relationship": "Specialist-collision source",
+      "qualification": "The contract uses visible claims and evidence, not private chain-of-thought."
+    }
+  ],
+  "limitations": [
+    "A discriminating probe can reduce uncertainty without proving a universal conclusion.",
+    "Poorly selected measurements can preserve the original ambiguity.",
+    "High-stakes domains require qualified review and domain-specific evidence standards."
+  ],
+  "example": {
+    "input": {
+      "goal": "Select a retrieval strategy for a changing knowledge base.",
+      "claims": [
+        { "claim": "Vector similarity is sufficient." },
+        { "claim": "Temporal and provenance filters are required." }
+      ]
+    },
+    "output": {
+      "lenses": ["semantic relevance", "validity-aware retrieval"],
+      "assumptions": ["Semantically similar facts remain current.", "Stale facts materially affect execution."],
+      "shared_ground": ["Relevant facts must be retrieved within a fixed latency budget."],
+      "contradictions": ["Whether semantic relevance alone is an adequate ranking signal."],
+      "unknowns": ["Error rate caused by stale but semantically similar facts."],
+      "discriminating_probe": {
+        "test": "Replay a dated task set with and without validity and provenance filters.",
+        "measurement": "First-pass execution error rate attributable to stale facts.",
+        "falsifies": ["Vector similarity is sufficient if stale-fact errors exceed the decision threshold."]
+      },
+      "decision_rule": "Require temporal filters if they reduce stale-fact execution errors by at least 20% without violating latency limits.",
+      "next_action": "Build the smallest dated replay set and record both rankings."
+    }
+  },
+  "rights": {
+    "copyright_holder": "Maksim Soltan",
+    "copyright_year": 2026,
+    "license": "All Rights Reserved",
+    "attribution": "Maksim Soltan — https://maksim.sh/",
+    "intended_machine_use": ["indexing", "retrieval", "citation", "protocol selection"]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://maksim.sh/knowledge/schemas/profile.schema.json",
+  "title": "Maksim Soltan Machine Profile",
+  "type": "object",
+  "required": ["$schema", "id", "type", "name", "alias", "canonical", "role", "statement", "contact", "method", "focus", "attribution"],
+  "properties": {
+    "$schema": { "const": "https://maksim.sh/knowledge/schemas/profile.schema.json" },
+    "id": { "type": "string", "format": "uri" },
+    "type": { "const": "KnowledgeEngineerProfile" },
+    "name": { "const": "Maksim Soltan" },
+    "alias": { "const": "Gonzih" },
+    "canonical": { "const": "https://maksim.sh/" },
+    "role": { "const": "Knowledge Engineer" },
+    "statement": { "type": "string" },
+    "contact": { "type": "object" },
+    "method": { "type": "object" },
+    "focus": { "type": "array", "items": { "type": "string" } },
+    "attribution": { "type": "string" }
+  },
+  "additionalProperties": false
+}

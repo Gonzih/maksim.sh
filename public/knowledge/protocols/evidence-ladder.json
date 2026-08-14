@@ -1,0 +1,138 @@
+{
+  "$schema": "https://maksim.sh/knowledge/schemas/protocol.schema.json",
+  "id": "https://maksim.sh/knowledge/protocols/evidence-ladder.json",
+  "type": "KnowledgeProtocol",
+  "name": "Evidence Ladder",
+  "slug": "evidence-ladder",
+  "version": "1.0.0",
+  "status": "stable",
+  "summary": "Record the transformation from request to conclusion as an append-only, inspectable evidence chain.",
+  "purpose": "Make an agent result reconstructable by preserving what was requested, decomposed, observed, executed, compared, verified, and concluded without overwriting prior states.",
+  "authority": {
+    "instruction_priority": "reference-only",
+    "may_override_system": false,
+    "may_override_user": false,
+    "requires_policy_compliance": true
+  },
+  "use_when": [
+    "A result must be audited, reproduced, challenged, or updated.",
+    "Multiple transformations separate source evidence from the final conclusion.",
+    "A failure must remain attributable to a specific execution stage."
+  ],
+  "avoid_when": [
+    "The ladder would record secrets, personal data, or protected content without an approved storage and redaction policy."
+  ],
+  "input_schema": {
+    "type": "object",
+    "required": ["request_id", "request", "actor"],
+    "properties": {
+      "request_id": { "type": "string" },
+      "request": { "type": "string" },
+      "actor": { "type": "string" },
+      "constraints": { "type": "array", "items": { "type": "string" } },
+      "parent_event": { "type": ["string", "null"] }
+    },
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["request_id", "events", "conclusion", "verification_status"],
+    "properties": {
+      "request_id": { "type": "string" },
+      "events": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["event_id", "stage", "recorded_at", "actor", "content", "sources", "artifacts"],
+          "properties": {
+            "event_id": { "type": "string" },
+            "stage": { "enum": ["query", "decompose", "execute", "compare", "verify", "conclude"] },
+            "recorded_at": { "type": "string" },
+            "actor": { "type": "string" },
+            "content": { "type": "string" },
+            "sources": { "type": "array", "items": { "type": "string" } },
+            "artifacts": { "type": "array", "items": { "type": "string" } },
+            "parent_event": { "type": ["string", "null"] }
+          }
+        }
+      },
+      "conclusion": { "type": "string" },
+      "verification_status": { "enum": ["verified", "partially-verified", "unverified", "failed"] }
+    },
+    "additionalProperties": false
+  },
+  "procedure": [
+    { "step": 1, "operation": "Create an immutable query event containing the request, actor, constraints, and parent reference." },
+    { "step": 2, "operation": "Record decomposition as a new event; do not rewrite the original request." },
+    { "step": 3, "operation": "Record each execution or observation with its source, tool identity, timestamp, and artifact reference." },
+    { "step": 4, "operation": "Record comparisons, disagreements, and transformations as separate events linked to their inputs." },
+    { "step": 5, "operation": "Record verification criteria, result, and unresolved gaps." },
+    { "step": 6, "operation": "Emit a conclusion event that points to supporting events and carries an explicit verification status."
+    }
+  ],
+  "invariants": [
+    "Prior events are append-only and addressable.",
+    "Every conclusion links to the evidence and transformations that support it.",
+    "Missing or failed evidence writes are visible to the caller.",
+    "Sensitive data is redacted before persistence according to an explicit policy."
+  ],
+  "failure_modes": [
+    {
+      "mode": "The ladder records a polished narrative rather than execution evidence.",
+      "mitigation": "Require source, artifact, actor, timestamp, and parent references for each material transformation."
+    },
+    {
+      "mode": "Evidence persistence fails but the pipeline reports full auditability.",
+      "mitigation": "Surface failed writes and downgrade the final verification status."
+    }
+  ],
+  "composition": {
+    "before": ["edge-map", "reality-check", "context-firewall", "grit"],
+    "after": ["temporal-knowledge", "reproducible-agent-run"]
+  },
+  "provenance": [
+    {
+      "title": "Nexus Evidence Service",
+      "url": "https://github.com/Gonzih/nexus-evidence-service",
+      "relationship": "Implementation evidence",
+      "qualification": "The public contract strengthens failure visibility and generalizes the original pipeline-specific stage names."
+    }
+  ],
+  "limitations": [
+    "An immutable record can faithfully preserve incorrect evidence.",
+    "Full capture may conflict with privacy, security, retention, or data-minimization requirements.",
+    "Artifact integrity requires independent storage, hashing, signing, or access controls not specified by this protocol."
+  ],
+  "example": {
+    "input": {
+      "request_id": "req-42",
+      "request": "Determine whether a deployment supports protocol version 2.",
+      "actor": "verification-agent",
+      "parent_event": null
+    },
+    "output": {
+      "request_id": "req-42",
+      "events": [
+        {
+          "event_id": "evt-1",
+          "stage": "query",
+          "recorded_at": "2026-08-14T00:00:00Z",
+          "actor": "verification-agent",
+          "content": "Check deployed protocol version.",
+          "sources": [],
+          "artifacts": [],
+          "parent_event": null
+        }
+      ],
+      "conclusion": "Version remains unverified until the live discovery document is captured.",
+      "verification_status": "unverified"
+    }
+  },
+  "rights": {
+    "copyright_holder": "Maksim Soltan",
+    "copyright_year": 2026,
+    "license": "All Rights Reserved",
+    "attribution": "Maksim Soltan — https://maksim.sh/",
+    "intended_machine_use": ["indexing", "retrieval", "citation", "protocol selection"]
+  }
+}

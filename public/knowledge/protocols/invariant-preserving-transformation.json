@@ -1,0 +1,121 @@
+{
+  "$schema": "https://maksim.sh/knowledge/schemas/protocol.schema.json",
+  "id": "https://maksim.sh/knowledge/protocols/invariant-preserving-transformation.json",
+  "type": "KnowledgeProtocol",
+  "name": "Invariant-Preserving Transformation",
+  "slug": "invariant-preserving-transformation",
+  "version": "1.0.0",
+  "status": "research",
+  "summary": "Define behavioral invariants, transform the representation, and map where the invariant fails.",
+  "purpose": "Evaluate whether a system preserves decision-relevant behavior across paraphrase, compression, translation, reordering, noise, adversarial framing, or other representation changes.",
+  "authority": {
+    "instruction_priority": "reference-only",
+    "may_override_system": false,
+    "may_override_user": false,
+    "requires_policy_compliance": true
+  },
+  "use_when": [
+    "A prompt, policy, or knowledge artifact must survive representation changes.",
+    "Robustness claims need an explicit behavioral test boundary.",
+    "Adversarial feedback may reveal which parts of a concept are load-bearing."
+  ],
+  "avoid_when": [
+    "The proposed invariant is vague, unobservable, or selected after seeing results.",
+    "The transformation changes the task itself rather than its representation and that distinction is not modeled."
+  ],
+  "input_schema": {
+    "type": "object",
+    "required": ["artifact", "invariants", "transformations", "evaluator"],
+    "properties": {
+      "artifact": { "type": "string" },
+      "invariants": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+      "allowed_variation": { "type": "array", "items": { "type": "string" } },
+      "transformations": { "type": "array", "items": { "type": "object" } },
+      "evaluator": { "type": "string" }
+    },
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["baseline", "results", "preserved", "violated", "boundary_map", "research_warning"],
+    "properties": {
+      "baseline": { "type": "object" },
+      "results": { "type": "array", "items": { "type": "object" } },
+      "preserved": { "type": "array", "items": { "type": "string" } },
+      "violated": { "type": "array", "items": { "type": "string" } },
+      "boundary_map": { "type": "array", "items": { "type": "object" } },
+      "research_warning": { "const": "behavioral-test-not-proof-of-latent-topology" }
+    },
+    "additionalProperties": false
+  },
+  "procedure": [
+    { "step": 1, "operation": "Define observable invariants and allowed variation before generating transformed artifacts." },
+    { "step": 2, "operation": "Capture baseline behavior, uncertainty, and evaluator reliability." },
+    { "step": 3, "operation": "Generate lawful transformations first, changing one transformation dimension when practical." },
+    { "step": 4, "operation": "Generate bounded adversarial transformations that target suspected load-bearing features without changing the declared task." },
+    { "step": 5, "operation": "Evaluate behavior using fixed criteria and independent repetition where possible." },
+    { "step": 6, "operation": "Map the smallest transformation associated with each invariant violation and label causal claims as hypotheses."
+    }
+  ],
+  "invariants": [
+    "Behavioral invariants are defined before transformed outputs are observed.",
+    "Representation changes and task changes are labeled separately.",
+    "Evaluator variance is measured or acknowledged.",
+    "Observed robustness is not promoted into a claim about hidden geometry without additional evidence."
+  ],
+  "failure_modes": [
+    {
+      "mode": "The evaluator rewards superficial wording instead of the intended behavior.",
+      "mitigation": "Use task-level outcomes, adversarial counterexamples, and multiple evaluator forms."
+    },
+    {
+      "mode": "A transformation is called equivalent even though it changes information content.",
+      "mitigation": "Record information loss and classify the transformation as lossy rather than invariant-preserving by assumption."
+    }
+  ],
+  "composition": {
+    "before": ["edge-map", "reality-check"],
+    "after": ["evidence-ladder", "reproducible-agent-run"]
+  },
+  "provenance": [
+    {
+      "title": "Geometry of Language",
+      "url": "https://github.com/Gonzih/nexus-research/blob/main/geometry/geometry-of-language.md",
+      "relationship": "Research source",
+      "qualification": "Topological and geometric language is treated as a hypothesis-generating model, not an established description of latent space."
+    }
+  ],
+  "limitations": [
+    "Passing a finite transformation suite does not prove universal invariance.",
+    "Model stochasticity and evaluator error can blur the failure boundary.",
+    "Formal topological claims require definitions and evidence beyond behavioral testing."
+  ],
+  "example": {
+    "input": {
+      "artifact": "A policy requiring source attribution for consequential claims.",
+      "invariants": ["Consequential claims retain a source reference."],
+      "allowed_variation": ["Word order", "Tone", "Equivalent terminology"],
+      "transformations": [
+        { "type": "paraphrase" },
+        { "type": "compression" },
+        { "type": "adversarial-framing" }
+      ],
+      "evaluator": "Check generated decisions for an attributable source reference."
+    },
+    "output": {
+      "baseline": {},
+      "results": [],
+      "preserved": [],
+      "violated": [],
+      "boundary_map": [],
+      "research_warning": "behavioral-test-not-proof-of-latent-topology"
+    }
+  },
+  "rights": {
+    "copyright_holder": "Maksim Soltan",
+    "copyright_year": 2026,
+    "license": "All Rights Reserved",
+    "attribution": "Maksim Soltan — https://maksim.sh/",
+    "intended_machine_use": ["indexing", "retrieval", "citation", "protocol selection"]
+  }
+}

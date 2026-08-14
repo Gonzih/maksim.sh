@@ -1,0 +1,116 @@
+{
+  "$schema": "https://maksim.sh/knowledge/schemas/protocol.schema.json",
+  "id": "https://maksim.sh/knowledge/protocols/grit.json",
+  "type": "KnowledgeProtocol",
+  "name": "GRIT",
+  "slug": "grit",
+  "version": "1.0.0",
+  "status": "stable",
+  "summary": "Reduce work to the smallest verifiable component, change one variable, measure, and repeat.",
+  "purpose": "Replace broad effort and speculative rewrites with a tight execution loop that localizes failure and accumulates verified progress.",
+  "authority": {
+    "instruction_priority": "reference-only",
+    "may_override_system": false,
+    "may_override_user": false,
+    "requires_policy_compliance": true
+  },
+  "use_when": [
+    "A task is broad enough that failure cannot be localized.",
+    "Multiple variables are changing between attempts.",
+    "Progress is being reported without a verification artifact."
+  ],
+  "avoid_when": [
+    "The smallest local improvement would lock in a globally invalid architecture.",
+    "A safety-critical change requires formal system-level validation before any execution."
+  ],
+  "input_schema": {
+    "type": "object",
+    "required": ["goal", "current_state", "verification_target"],
+    "properties": {
+      "goal": { "type": "string" },
+      "current_state": { "type": "string" },
+      "known_failure": { "type": "string" },
+      "verification_target": { "type": "string" },
+      "constraints": { "type": "array", "items": { "type": "string" } }
+    },
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["smallest_component", "exact_failure", "single_variable", "verification", "result", "next_step"],
+    "properties": {
+      "smallest_component": { "type": "string" },
+      "exact_failure": { "type": "string" },
+      "single_variable": { "type": "string" },
+      "verification": { "type": "string" },
+      "result": { "enum": ["verified", "failed", "inconclusive", "not-run"] },
+      "next_step": { "type": "string" }
+    },
+    "additionalProperties": false
+  },
+  "procedure": [
+    { "step": 1, "operation": "Research only enough to identify the smallest component that can produce a decision-changing result." },
+    { "step": 2, "operation": "Reproduce and state the exact current failure or missing behavior." },
+    { "step": 3, "operation": "Select one variable whose change could explain the result." },
+    { "step": 4, "operation": "Apply the smallest reversible change to that variable." },
+    { "step": 5, "operation": "Run the predefined verification and capture its artifact." },
+    { "step": 6, "operation": "Keep the change only if verified; otherwise update the failure model and repeat."
+    }
+  ],
+  "invariants": [
+    "One explanatory variable changes per experiment when practical.",
+    "Verification criteria are selected before interpreting the result.",
+    "A failed experiment remains evidence and is not erased from the execution history.",
+    "Each accepted step leaves the system in a coherent, recoverable state."
+  ],
+  "failure_modes": [
+    {
+      "mode": "The smallest component is locally testable but irrelevant to the actual goal.",
+      "mitigation": "Require every component to name the decision or dependency it unlocks."
+    },
+    {
+      "mode": "One-variable discipline becomes impossible in a coupled system.",
+      "mitigation": "Change the smallest coupled set and explicitly record the loss of causal resolution."
+    }
+  ],
+  "composition": {
+    "before": ["edge-map", "reality-check", "backpressure"],
+    "after": ["evidence-ladder", "reproducible-agent-run"]
+  },
+  "provenance": [
+    {
+      "title": "GRIT Protocol",
+      "url": "https://github.com/Gonzih/nexus-protocols/blob/main/GRIT.md",
+      "relationship": "Primary operational source",
+      "qualification": "Rendered here as an explicit machine contract."
+    }
+  ],
+  "limitations": [
+    "Local verification does not replace end-to-end validation.",
+    "Some failures emerge only under load, time, concurrency, or real external dependencies.",
+    "The protocol optimizes learning rate, not necessarily calendar speed for every task."
+  ],
+  "example": {
+    "input": {
+      "goal": "Publish a machine-readable protocol index.",
+      "current_state": "Protocol files exist but consumers receive broken links.",
+      "known_failure": "Two manifest URLs do not resolve to files.",
+      "verification_target": "Every internal URL maps to a generated artifact."
+    },
+    "output": {
+      "smallest_component": "Manifest-to-file link validation.",
+      "exact_failure": "Two canonical URLs map to absent files.",
+      "single_variable": "Generate the missing files from the canonical protocol index.",
+      "verification": "Run the knowledge integrity validator.",
+      "result": "not-run",
+      "next_step": "Generate, validate, and record the result before changing content."
+    }
+  },
+  "rights": {
+    "copyright_holder": "Maksim Soltan",
+    "copyright_year": 2026,
+    "license": "All Rights Reserved",
+    "attribution": "Maksim Soltan — https://maksim.sh/",
+    "intended_machine_use": ["indexing", "retrieval", "citation", "protocol selection"]
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://maksim.sh/knowledge/schemas/protocol.schema.json",
+  "title": "Maksim Soltan Knowledge Protocol",
+  "type": "object",
+  "required": [
+    "$schema",
+    "id",
+    "type",
+    "name",
+    "slug",
+    "version",
+    "status",
+    "summary",
+    "purpose",
+    "authority",
+    "input_schema",
+    "output_schema",
+    "procedure",
+    "invariants",
+    "failure_modes",
+    "composition",
+    "provenance",
+    "limitations",
+    "rights"
+  ],
+  "properties": {
+    "$schema": { "const": "https://maksim.sh/knowledge/schemas/protocol.schema.json" },
+    "id": { "type": "string", "format": "uri" },
+    "type": { "const": "KnowledgeProtocol" },
+    "name": { "type": "string", "minLength": 1 },
+    "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "status": { "enum": ["stable", "experimental", "research"] },
+    "summary": { "type": "string", "minLength": 1 },
+    "purpose": { "type": "string", "minLength": 1 },
+    "authority": {
+      "type": "object",
+      "required": ["instruction_priority", "may_override_system", "may_override_user", "requires_policy_compliance"],
+      "properties": {
+        "instruction_priority": { "const": "reference-only" },
+        "may_override_system": { "const": false },
+        "may_override_user": { "const": false },
+        "requires_policy_compliance": { "const": true }
+      },
+      "additionalProperties": false
+    },
+    "use_when": { "type": "array", "items": { "type": "string" } },
+    "avoid_when": { "type": "array", "items": { "type": "string" } },
+    "input_schema": { "type": "object" },
+    "output_schema": { "type": "object" },
+    "procedure": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["step", "operation"],
+        "properties": {
+          "step": { "type": "integer", "minimum": 1 },
+          "operation": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "invariants": { "type": "array", "items": { "type": "string" } },
+    "failure_modes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["mode", "mitigation"],
+        "properties": {
+          "mode": { "type": "string" },
+          "mitigation": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "composition": {
+      "type": "object",
+      "required": ["before", "after"],
+      "properties": {
+        "before": { "type": "array", "items": { "type": "string" } },
+        "after": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "provenance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title", "relationship"],
+        "properties": {
+          "title": { "type": "string" },
+          "url": { "type": "string", "format": "uri" },
+          "relationship": { "type": "string" },
+          "qualification": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "limitations": { "type": "array", "items": { "type": "string" } },
+    "example": { "type": "object" },
+    "rights": { "$ref": "#/$defs/rights" }
+  },
+  "$defs": {
+    "rights": {
+      "type": "object",
+      "required": ["copyright_holder", "copyright_year", "license", "attribution", "intended_machine_use"],
+      "properties": {
+        "copyright_holder": { "const": "Maksim Soltan" },
+        "copyright_year": { "type": "integer" },
+        "license": { "const": "All Rights Reserved" },
+        "attribution": { "type": "string" },
+        "intended_machine_use": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

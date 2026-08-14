@@ -1,0 +1,129 @@
+{
+  "$schema": "https://maksim.sh/knowledge/schemas/protocol.schema.json",
+  "id": "https://maksim.sh/knowledge/protocols/reproducible-agent-run.json",
+  "type": "KnowledgeProtocol",
+  "name": "Reproducible Agent Run",
+  "slug": "reproducible-agent-run",
+  "version": "1.0.0",
+  "status": "stable",
+  "summary": "Capture enough execution state to replay, branch, compare, and audit an agent run.",
+  "purpose": "Turn an agent interaction into a versioned execution object whose inputs, environment, decisions, tool effects, artifacts, and branch lineage can be inspected without storing unneeded secrets or private reasoning.",
+  "authority": {
+    "instruction_priority": "reference-only",
+    "may_override_system": false,
+    "may_override_user": false,
+    "requires_policy_compliance": true
+  },
+  "use_when": [
+    "An execution must be replayed, audited, compared, debugged, or branched.",
+    "Tool effects or provider behavior may change the result.",
+    "A self-modifying or high-autonomy workflow needs rollback evidence."
+  ],
+  "avoid_when": [
+    "The capture would retain credentials, private messages, protected data, or unnecessary model internals.",
+    "The environment cannot be isolated enough for the proposed replay."
+  ],
+  "input_schema": {
+    "type": "object",
+    "required": ["run_id", "goal", "inputs", "environment", "tools", "redaction_policy"],
+    "properties": {
+      "run_id": { "type": "string" },
+      "goal": { "type": "string" },
+      "inputs": { "type": "array", "items": { "type": "object" } },
+      "environment": { "type": "object" },
+      "tools": { "type": "array", "items": { "type": "object" } },
+      "parent_run": { "type": ["string", "null"] },
+      "redaction_policy": { "type": "string" }
+    },
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["run_id", "manifest", "events", "artifacts", "diff", "verification", "replay_status"],
+    "properties": {
+      "run_id": { "type": "string" },
+      "manifest": { "type": "object" },
+      "events": { "type": "array", "items": { "type": "object" } },
+      "artifacts": { "type": "array", "items": { "type": "object" } },
+      "diff": { "type": "object" },
+      "verification": { "type": "object" },
+      "replay_status": { "enum": ["reproducible", "partially-reproducible", "non-reproducible", "not-replayed"] }
+    },
+    "additionalProperties": false
+  },
+  "procedure": [
+    { "step": 1, "operation": "Create a run manifest containing goal, inputs, model and provider identifiers, tool versions, environment fingerprint, authority, and parent run." },
+    { "step": 2, "operation": "Redact credentials and unnecessary sensitive content before persistence; store references rather than secrets." },
+    { "step": 3, "operation": "Snapshot mutable state before the first side effect." },
+    { "step": 4, "operation": "Record tool calls, observable results, file or state effects, errors, and timestamps as append-only events." },
+    { "step": 5, "operation": "Store output artifacts and compute a state diff against the starting snapshot." },
+    { "step": 6, "operation": "Replay or branch from a declared checkpoint, compare artifacts, and report the reproducibility boundary."
+    }
+  ],
+  "invariants": [
+    "Credentials and bearer tokens are never stored in captures.",
+    "Observable inputs, outputs, tool effects, and artifacts are preferred over private chain-of-thought.",
+    "Every branch declares its parent run and divergence point.",
+    "A replay reports environmental or provider differences rather than hiding them."
+  ],
+  "failure_modes": [
+    {
+      "mode": "A raw HTTP or process capture persists live credentials.",
+      "mitigation": "Redact before write, scan artifacts before commit, and treat capture storage as sensitive by default."
+    },
+    {
+      "mode": "A replay is called deterministic despite provider, network, clock, or dependency drift.",
+      "mitigation": "Fingerprint nondeterministic dependencies and report partial reproducibility with the differing boundary."
+    }
+  ],
+  "composition": {
+    "before": ["context-firewall", "evidence-ladder", "grit"],
+    "after": ["governed-self-modification"]
+  },
+  "provenance": [
+    {
+      "title": "Seed Phrase System",
+      "url": "https://github.com/Gonzih/nexus-protocols/blob/main/SEED_PHRASE_SYSTEM.md",
+      "relationship": "Conversation lineage and branchability source",
+      "qualification": "The public contract replaces mnemonic framing with explicit run manifests, parent links, and redaction rules."
+    },
+    {
+      "title": "Nexus Clojure Proxy",
+      "url": "https://github.com/Gonzih/nexus-clojure-proxy",
+      "relationship": "Scripted-response and behavioral-capture implementation evidence",
+      "qualification": "Used as evidence for deterministic test doubles, not as a production isolation guarantee."
+    }
+  ],
+  "limitations": [
+    "Commercial model inference may remain nondeterministic even with identical visible inputs.",
+    "A full environment snapshot can be expensive or platform-specific.",
+    "Reproducibility does not establish correctness; verification criteria remain separate."
+  ],
+  "example": {
+    "input": {
+      "run_id": "run-42",
+      "goal": "Generate and validate a protocol manifest.",
+      "inputs": [{ "path": "protocols/index.json", "digest": "sha256:example" }],
+      "environment": { "runtime": "node", "version": "current" },
+      "tools": [{ "name": "knowledge-validator", "version": "1.0.0" }],
+      "parent_run": null,
+      "redaction_policy": "Remove credentials and personal data before persistence."
+    },
+    "output": {
+      "run_id": "run-42",
+      "manifest": { "captured": true },
+      "events": [],
+      "artifacts": [],
+      "diff": {},
+      "verification": { "status": "pending" },
+      "replay_status": "not-replayed"
+    }
+  },
+  "rights": {
+    "copyright_holder": "Maksim Soltan",
+    "copyright_year": 2026,
+    "license": "All Rights Reserved",
+    "attribution": "Maksim Soltan — https://maksim.sh/",
+    "intended_machine_use": ["indexing", "retrieval", "citation", "protocol selection"]
+  }
+}

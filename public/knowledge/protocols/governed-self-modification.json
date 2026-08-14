@@ -1,0 +1,128 @@
+{
+  "$schema": "https://maksim.sh/knowledge/schemas/protocol.schema.json",
+  "id": "https://maksim.sh/knowledge/protocols/governed-self-modification.json",
+  "type": "KnowledgeProtocol",
+  "name": "Governed Self-Modification",
+  "slug": "governed-self-modification",
+  "version": "1.0.0",
+  "status": "experimental",
+  "summary": "Gate runtime self-modification through validation, contract tests, atomic activation, observation, and rollback.",
+  "purpose": "Allow a system to improve replaceable behavior without granting unrestricted mutation of its authority, safety boundary, immutable core, or recovery path.",
+  "authority": {
+    "instruction_priority": "reference-only",
+    "may_override_system": false,
+    "may_override_user": false,
+    "requires_policy_compliance": true
+  },
+  "use_when": [
+    "A runtime proposes replacing a tool, function, prompt module, policy implementation, or strategy.",
+    "Hot-swapping is operationally valuable and a safe rollback path exists.",
+    "The modified component has an explicit contract and bounded authority."
+  ],
+  "avoid_when": [
+    "The target controls root authority, credential access, audit logging, rollback, or the validation gate itself.",
+    "The change cannot be tested in isolation or reversed safely.",
+    "The implementation relies on unrestricted native evaluation of untrusted input."
+  ],
+  "input_schema": {
+    "type": "object",
+    "required": ["proposal_id", "target", "current_version", "candidate", "contract_tests", "rollback_plan", "authority_boundary"],
+    "properties": {
+      "proposal_id": { "type": "string" },
+      "target": { "type": "string" },
+      "current_version": { "type": "string" },
+      "candidate": { "type": "object" },
+      "contract_tests": { "type": "array", "items": { "type": "string" } },
+      "rollback_plan": { "type": "string" },
+      "authority_boundary": { "type": "string" }
+    },
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["proposal_id", "validation", "test_results", "activation", "observation", "rollback_status"],
+    "properties": {
+      "proposal_id": { "type": "string" },
+      "validation": { "enum": ["accepted", "rejected"] },
+      "test_results": { "type": "array", "items": { "type": "object" } },
+      "activation": { "enum": ["inactive", "canary", "active", "rolled-back"] },
+      "observation": { "type": "object" },
+      "rollback_status": { "enum": ["available", "executed", "failed", "not-applicable"] }
+    },
+    "additionalProperties": false
+  },
+  "procedure": [
+    { "step": 1, "operation": "Reject proposals targeting immutable authority, audit, validation, credential, or rollback boundaries." },
+    { "step": 2, "operation": "Parse and validate the candidate representation without executing it in the production authority context." },
+    { "step": 3, "operation": "Run contract, safety, resource, and regression tests in an isolated environment." },
+    { "step": 4, "operation": "Snapshot the current implementation and activate the candidate atomically under a bounded canary." },
+    { "step": 5, "operation": "Observe predefined behavior, cost, error, and policy metrics without allowing the candidate to redefine success." },
+    { "step": 6, "operation": "Promote only verified candidates; automatically rollback on threshold violation and append the complete event record."
+    }
+  ],
+  "invariants": [
+    "The candidate cannot modify the validation gate, immutable core, authority boundary, audit log, or rollback mechanism.",
+    "Activation is atomic and reversible.",
+    "Success criteria are fixed before candidate execution.",
+    "Every proposal, rejection, activation, observation, and rollback is recorded."
+  ],
+  "failure_modes": [
+    {
+      "mode": "The candidate passes narrow tests while exploiting or bypassing the evaluator.",
+      "mitigation": "Keep evaluator authority separate, use adversarial contract tests, and prohibit candidate control over test selection or result interpretation."
+    },
+    {
+      "mode": "Rollback exists in documentation but cannot restore external side effects.",
+      "mitigation": "Separate reversible runtime activation from irreversible external actions and gate those actions independently."
+    }
+  ],
+  "composition": {
+    "before": ["context-firewall", "reproducible-agent-run", "grit"],
+    "after": ["evidence-ladder", "reality-check"]
+  },
+  "provenance": [
+    {
+      "title": "Nexus Clojure",
+      "url": "https://github.com/Gonzih/nexus-clojure",
+      "relationship": "Runtime self-modification implementation source",
+      "qualification": "The current native evaluation path is unsandboxed; this contract adds mandatory isolation and immutable governance boundaries."
+    },
+    {
+      "title": "Self-modification implementation",
+      "url": "https://github.com/Gonzih/nexus-clojure/blob/main/src/nexus/self_modify.clj",
+      "relationship": "Atomic replacement, logging, and rollback evidence",
+      "qualification": "Implementation evidence does not imply that unrestricted evaluation is safe."
+    }
+  ],
+  "limitations": [
+    "No finite test suite proves a self-modification safe under every future input.",
+    "External side effects can be irreversible even when code activation is rolled back.",
+    "The protocol requires real isolation and authority separation supplied by the host system."
+  ],
+  "example": {
+    "input": {
+      "proposal_id": "mod-42",
+      "target": "retrieval-ranker",
+      "current_version": "1.2.0",
+      "candidate": { "version": "1.3.0", "artifact": "sha256:example" },
+      "contract_tests": ["preserves tenant isolation", "improves dated-task recall", "stays within latency budget"],
+      "rollback_plan": "Atomically restore version 1.2.0 and its configuration snapshot.",
+      "authority_boundary": "Candidate may rank retrieved facts but may not change access filters or audit logging."
+    },
+    "output": {
+      "proposal_id": "mod-42",
+      "validation": "accepted",
+      "test_results": [],
+      "activation": "inactive",
+      "observation": {},
+      "rollback_status": "available"
+    }
+  },
+  "rights": {
+    "copyright_holder": "Maksim Soltan",
+    "copyright_year": 2026,
+    "license": "All Rights Reserved",
+    "attribution": "Maksim Soltan — https://maksim.sh/",
+    "intended_machine_use": ["indexing", "retrieval", "citation", "protocol selection"]
+  }
+}

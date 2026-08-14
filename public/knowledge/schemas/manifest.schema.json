@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://maksim.sh/knowledge/schemas/manifest.schema.json",
+  "title": "Maksim Soltan Knowledge Manifest",
+  "type": "object",
+  "required": ["$schema", "id", "type", "version", "canonical", "updated", "profile", "discovery", "collections", "retrieval_policy", "capabilities"],
+  "properties": {
+    "$schema": { "const": "https://maksim.sh/knowledge/schemas/manifest.schema.json" },
+    "id": { "type": "string", "format": "uri" },
+    "type": { "const": "KnowledgeManifest" },
+    "version": { "type": "string" },
+    "canonical": { "const": "https://maksim.sh/" },
+    "updated": { "type": "string", "format": "date" },
+    "profile": { "type": "string", "format": "uri" },
+    "discovery": { "type": "object" },
+    "collections": { "type": "array", "minItems": 1 },
+    "retrieval_policy": { "type": "object" },
+    "capabilities": { "type": "object" }
+  },
+  "additionalProperties": false
+}

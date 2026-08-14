@@ -1,0 +1,184 @@
+{
+  "$schema": "https://maksim.sh/knowledge/schemas/evidence.schema.json",
+  "id": "https://maksim.sh/knowledge/evidence/index.json",
+  "type": "EvidenceIndex",
+  "version": "1.0.0",
+  "updated": "2026-08-14",
+  "interpretation": [
+    "An implementation link demonstrates that a mechanism exists; it does not prove that every surrounding claim is correct.",
+    "Prototype means the architecture or contract is implemented with material simplifications.",
+    "Experimental means the mechanism is implemented but its policy, thresholds, or operating assumptions remain subject to evaluation.",
+    "Research means the artifact is a hypothesis, framework, or proposed test—not an established fact."
+  ],
+  "claims": [
+    {
+      "id": "freedom-edge-method",
+      "label": "research",
+      "claim": "Freedom and Edge describe a method for escaping false binaries, exposing governing lenses, preserving useful contradiction, and deriving a discriminating next probe.",
+      "evidence": [
+        {
+          "title": "Freedom Protocol",
+          "url": "https://github.com/Gonzih/nexus-protocols/blob/main/FREEDOM.md",
+          "kind": "source-framework"
+        },
+        {
+          "title": "Friction Point Framework",
+          "url": "https://github.com/Gonzih/nexus-protocols/blob/main/FRICTION_POINT_FRAMEWORK.md",
+          "kind": "source-framework"
+        }
+      ],
+      "qualification": "The public protocol contracts are operational distillations. They intentionally exclude unsupported mathematical, psychological, anti-safety, and prompt-activation claims from the source material."
+    },
+    {
+      "id": "temporal-semantic-memory",
+      "label": "implemented",
+      "claim": "Gravitas implements append-only assertions and retractions, transaction time, validity intervals, as-of queries, provenance, corroboration, contradiction, decay, and anomaly reporting.",
+      "evidence": [
+        {
+          "title": "Gravitas transaction and temporal query implementation",
+          "url": "https://github.com/Gonzih/nexus-gravitas/blob/main/src/gravita.ts",
+          "kind": "source-code"
+        },
+        {
+          "title": "Gravitas weighting implementation",
+          "url": "https://github.com/Gonzih/nexus-gravitas/blob/main/src/weight.ts",
+          "kind": "source-code"
+        }
+      ],
+      "qualification": "Influence weights, decay, phase boundaries, and anomaly thresholds are policy heuristics. They must not be interpreted as objective truth probabilities."
+    },
+    {
+      "id": "append-only-evidence-ladder",
+      "label": "implemented",
+      "claim": "The Evidence Service records an append-only audit ladder spanning query, decomposition, model execution, consensus, verification, and conclusion.",
+      "evidence": [
+        {
+          "title": "Nexus Evidence Service",
+          "url": "https://github.com/Gonzih/nexus-evidence-service",
+          "kind": "repository"
+        },
+        {
+          "title": "Evidence routes",
+          "url": "https://github.com/Gonzih/nexus-evidence-service/blob/main/src/routes/evidence.ts",
+          "kind": "source-code"
+        }
+      ],
+      "qualification": "The ladder preserves recorded transformations. It does not independently establish the correctness of evidence supplied to it."
+    },
+    {
+      "id": "multi-model-convergence",
+      "label": "prototype",
+      "claim": "The Convergence Service fans requests out to multiple model providers, records evidence, invokes consensus analysis, and returns structured pipeline output.",
+      "evidence": [
+        {
+          "title": "Nexus Convergence Service",
+          "url": "https://github.com/Gonzih/nexus-convergence-service",
+          "kind": "repository"
+        },
+        {
+          "title": "Convergence route",
+          "url": "https://github.com/Gonzih/nexus-convergence-service/blob/main/src/routes/converge.ts",
+          "kind": "source-code"
+        }
+      ],
+      "qualification": "The current final-answer path joins successful model responses rather than synthesizing a new answer, and some evidence-write failures are non-fatal."
+    },
+    {
+      "id": "consensus-analysis",
+      "label": "prototype",
+      "claim": "The Consensus Service computes cross-response similarity, inversion indicators, agreement scores, and candidate agreed or disputed claims.",
+      "evidence": [
+        {
+          "title": "Consensus implementation",
+          "url": "https://github.com/Gonzih/nexus-consensus-service/blob/main/src/lib/consensus.ts",
+          "kind": "source-code"
+        }
+      ],
+      "qualification": "The implementation uses bag-of-words term frequency cosine, sentence overlap, and regular-expression inversion rules. It is not semantic verification and must not be called a truth engine."
+    },
+    {
+      "id": "reasoning-provenance-graph",
+      "label": "prototype",
+      "claim": "The Reasoning Graph captures interaction artifacts, chunks content, computes similarity edges, and renders a D3 graph of candidate influence relationships.",
+      "evidence": [
+        {
+          "title": "Nexus Reasoning Graph",
+          "url": "https://github.com/Gonzih/nexus-reasoning-graph",
+          "kind": "repository"
+        },
+        {
+          "title": "Influence calculation",
+          "url": "https://github.com/Gonzih/nexus-reasoning-graph/blob/main/service/src/influence.ts",
+          "kind": "source-code"
+        }
+      ],
+      "qualification": "An edge represents semantic similarity to a later synthesis. It is candidate influence, not causal proof and not access to private model reasoning."
+    },
+    {
+      "id": "governed-runtime-modification",
+      "label": "prototype",
+      "claim": "The Clojure harness supports runtime tool replacement, modification logging, rollback, nREPL, and MCP-oriented composition.",
+      "evidence": [
+        {
+          "title": "Nexus Clojure harness",
+          "url": "https://github.com/Gonzih/nexus-clojure",
+          "kind": "repository"
+        },
+        {
+          "title": "Self-modification implementation",
+          "url": "https://github.com/Gonzih/nexus-clojure/blob/main/src/nexus/self_modify.clj",
+          "kind": "source-code"
+        }
+      ],
+      "qualification": "Native evaluation is currently unsandboxed. The public protocol therefore requires validation, tests, restricted authority, and rollback before activation."
+    },
+    {
+      "id": "agent-runtime",
+      "label": "implemented",
+      "claim": "Soul Core implements a Rust agent runtime with steerable loops, context management, permissions, budgets, tools, MCP, persistence, memory, snapshots, subagents, and virtual execution interfaces.",
+      "evidence": [
+        {
+          "title": "Soul Core",
+          "url": "https://github.com/Gonzih/nexus-soul-core",
+          "kind": "repository"
+        },
+        {
+          "title": "Agent loop",
+          "url": "https://github.com/Gonzih/nexus-soul-core/tree/main/src/agent",
+          "kind": "source-code"
+        },
+        {
+          "title": "Permission system",
+          "url": "https://github.com/Gonzih/nexus-soul-core/tree/main/src/permission",
+          "kind": "source-code"
+        }
+      ],
+      "qualification": "The public knowledge corpus endorses the architectural patterns documented here, not every provider-specific or experimental behavior in the runtime."
+    },
+    {
+      "id": "invariant-topology-research",
+      "label": "research",
+      "claim": "Nexus research proposes evaluating semantic robustness by defining invariants, applying lawful and adversarial transformations, and measuring where behavior changes.",
+      "evidence": [
+        {
+          "title": "Geometry of Language",
+          "url": "https://github.com/Gonzih/nexus-research/blob/main/geometry/geometry-of-language.md",
+          "kind": "research-note"
+        }
+      ],
+      "qualification": "Geometric language is a modeling frame. Latent semantic regions, topological equivalence, and related analogies remain hypotheses unless established by an explicit experiment."
+    }
+  ],
+  "withheld_sources": [
+    {
+      "category": "execution-capture implementation evidence",
+      "status": "withheld",
+      "reason": "Not included in the public evidence index until source hygiene is complete."
+    },
+    {
+      "category": "private optimization experiments",
+      "status": "withheld",
+      "reason": "Private research is not part of the public machine-readable corpus."
+    }
+  ]
+}

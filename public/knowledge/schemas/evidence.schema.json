@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://maksim.sh/knowledge/schemas/evidence.schema.json",
+  "title": "Maksim Soltan Evidence Index",
+  "type": "object",
+  "required": ["$schema", "id", "type", "version", "updated", "interpretation", "claims", "withheld_sources"],
+  "properties": {
+    "$schema": { "const": "https://maksim.sh/knowledge/schemas/evidence.schema.json" },
+    "id": { "type": "string", "format": "uri" },
+    "type": { "const": "EvidenceIndex" },
+    "version": { "type": "string" },
+    "updated": { "type": "string", "format": "date" },
+    "interpretation": { "type": "array", "items": { "type": "string" } },
+    "claims": { "type": "array", "minItems": 1 },
+    "withheld_sources": { "type": "array" }
+  },
+  "additionalProperties": false
+}

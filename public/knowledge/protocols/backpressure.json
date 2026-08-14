@@ -1,0 +1,114 @@
+{
+  "$schema": "https://maksim.sh/knowledge/schemas/protocol.schema.json",
+  "id": "https://maksim.sh/knowledge/protocols/backpressure.json",
+  "type": "KnowledgeProtocol",
+  "name": "Backpressure",
+  "slug": "backpressure",
+  "version": "1.0.0",
+  "status": "stable",
+  "summary": "Treat repeated friction as information about a mismatched model, interface, dependency, or scope.",
+  "purpose": "Stop spending force on a blocked execution path, identify the boundary producing resistance, and change the controlling variable rather than repeating the same attempt.",
+  "authority": {
+    "instruction_priority": "reference-only",
+    "may_override_system": false,
+    "may_override_user": false,
+    "requires_policy_compliance": true
+  },
+  "use_when": [
+    "The same failure recurs despite retries.",
+    "Queues, context, coordination, dependencies, or interfaces are accumulating pressure.",
+    "Increasing effort produces less useful output."
+  ],
+  "avoid_when": [
+    "The failure is transient and a bounded retry policy has not been exhausted.",
+    "Stopping the current path would create greater immediate harm than stabilizing it."
+  ],
+  "input_schema": {
+    "type": "object",
+    "required": ["goal", "attempts", "observed_failures"],
+    "properties": {
+      "goal": { "type": "string" },
+      "attempts": { "type": "array", "items": { "type": "string" } },
+      "observed_failures": { "type": "array", "items": { "type": "string" } },
+      "constraints": { "type": "array", "items": { "type": "string" } },
+      "metrics": { "type": "object" }
+    },
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["pressure_signal", "boundary_class", "controlling_hypothesis", "release_test", "next_action"],
+    "properties": {
+      "pressure_signal": { "type": "string" },
+      "boundary_class": { "enum": ["model", "interface", "dependency", "capacity", "authority", "scope", "unknown"] },
+      "controlling_hypothesis": { "type": "string" },
+      "release_test": { "type": "string" },
+      "next_action": { "type": "string" },
+      "stop_condition": { "type": "string" }
+    },
+    "additionalProperties": false
+  },
+  "procedure": [
+    { "step": 1, "operation": "Stop unbounded retries and preserve the latest failure evidence." },
+    { "step": 2, "operation": "Describe the pressure signal as an observable change in latency, errors, queue depth, context size, coordination cost, or output quality." },
+    { "step": 3, "operation": "Classify the boundary as model, interface, dependency, capacity, authority, scope, or unknown." },
+    { "step": 4, "operation": "Identify the smallest upstream assumption capable of producing the repeated pressure." },
+    { "step": 5, "operation": "Change one controlling variable or reduce the load crossing the boundary." },
+    { "step": 6, "operation": "Run a bounded release test and define the condition for continuing, escalating, or abandoning the path." }
+  ],
+  "invariants": [
+    "Retries are bounded and observable.",
+    "The latest failure evidence is preserved before changing the path.",
+    "Only one controlling variable changes in the release test when practical.",
+    "Backpressure is a signal to investigate, not proof of a specific cause."
+  ],
+  "failure_modes": [
+    {
+      "mode": "Every obstacle is romanticized as meaningful backpressure.",
+      "mitigation": "Require an observable repeated signal and compare against a bounded transient-failure baseline."
+    },
+    {
+      "mode": "The system reduces load while leaving the true dependency failure untouched.",
+      "mitigation": "State a falsifiable controlling hypothesis and verify that the release test changes the pressure signal."
+    }
+  ],
+  "composition": {
+    "before": ["reality-check", "context-firewall"],
+    "after": ["grit", "evidence-ladder"]
+  },
+  "provenance": [
+    {
+      "title": "Backpressure Protocol",
+      "url": "https://github.com/Gonzih/nexus-protocols/blob/main/BACKPRESSURE_PROTOCOL.md",
+      "relationship": "Operational distillation",
+      "qualification": "The public contract narrows a broad source document to measurable system behavior."
+    }
+  ],
+  "limitations": [
+    "Boundary classification can be wrong when observability is weak.",
+    "Reducing pressure can hide a latent defect rather than fix it.",
+    "Distributed systems may have multiple coupled bottlenecks that cannot be isolated in one experiment."
+  ],
+  "example": {
+    "input": {
+      "goal": "Produce a valid execution plan.",
+      "attempts": ["Sent the complete repository context three times."],
+      "observed_failures": ["Context limit exceeded", "Plan omitted acceptance criteria"]
+    },
+    "output": {
+      "pressure_signal": "Context size rises while plan completeness falls.",
+      "boundary_class": "scope",
+      "controlling_hypothesis": "Unfiltered repository context displaces execution-critical requirements.",
+      "release_test": "Provide only acceptance criteria, dependency graph, and files in the predicted blast radius.",
+      "next_action": "Compile a minimal context pack and rerun once.",
+      "stop_condition": "Escalate if the reduced context still omits acceptance criteria."
+    }
+  },
+  "rights": {
+    "copyright_holder": "Maksim Soltan",
+    "copyright_year": 2026,
+    "license": "All Rights Reserved",
+    "attribution": "Maksim Soltan — https://maksim.sh/",
+    "intended_machine_use": ["indexing", "retrieval", "citation", "protocol selection"]
+  }
+}

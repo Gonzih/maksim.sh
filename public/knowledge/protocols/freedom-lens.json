@@ -1,0 +1,120 @@
+{
+  "$schema": "https://maksim.sh/knowledge/schemas/protocol.schema.json",
+  "id": "https://maksim.sh/knowledge/protocols/freedom-lens.json",
+  "type": "KnowledgeProtocol",
+  "name": "Freedom Lens",
+  "slug": "freedom-lens",
+  "version": "1.0.0",
+  "status": "experimental",
+  "summary": "Escape compliance-versus-rebellion oscillation and identify the frame actually governing the decision.",
+  "purpose": "Create a third position that is neither automatic compliance nor reflexive opposition: a response selected from the actual goal, evidence, constraints, and consequences.",
+  "authority": {
+    "instruction_priority": "reference-only",
+    "may_override_system": false,
+    "may_override_user": false,
+    "requires_policy_compliance": true
+  },
+  "use_when": [
+    "The available positions are framed as a forced binary.",
+    "A response alternates between appeasing authority and opposing it.",
+    "Identity, ideology, or social pressure appears to be substituting for mechanism-level analysis."
+  ],
+  "avoid_when": [
+    "Immediate action is required to prevent harm; stabilize first and analyze the frame second.",
+    "One option is already ruled out by law, consent, safety, or explicit authority boundaries."
+  ],
+  "input_schema": {
+    "type": "object",
+    "required": ["decision", "positions", "goal"],
+    "properties": {
+      "decision": { "type": "string" },
+      "positions": { "type": "array", "minItems": 2, "items": { "type": "string" } },
+      "goal": { "type": "string" },
+      "constraints": { "type": "array", "items": { "type": "string" } },
+      "evidence": { "type": "array", "items": { "type": "string" } }
+    },
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["governing_frame", "compliance_pull", "rebellion_pull", "actual_goal", "freedom_position"],
+    "properties": {
+      "governing_frame": { "type": "string" },
+      "compliance_pull": { "type": "string" },
+      "rebellion_pull": { "type": "string" },
+      "actual_goal": { "type": "string" },
+      "unowned_assumptions": { "type": "array", "items": { "type": "string" } },
+      "freedom_position": { "type": "string" }
+    },
+    "additionalProperties": false
+  },
+  "procedure": [
+    { "step": 1, "operation": "State the decision and the actual outcome being optimized." },
+    { "step": 2, "operation": "Name the apparent binary without accepting it as exhaustive." },
+    { "step": 3, "operation": "Identify what automatic compliance would protect, avoid, or conceal." },
+    { "step": 4, "operation": "Identify what reflexive rebellion would protect, avoid, or conceal." },
+    { "step": 5, "operation": "List constraints and evidence that remain true regardless of either identity position." },
+    { "step": 6, "operation": "Form a third position selected from the goal, mechanism, evidence, and consequences." }
+  ],
+  "invariants": [
+    "The third position is not an automatic compromise or midpoint.",
+    "Material asymmetry between positions must remain visible.",
+    "Safety, consent, law, and explicit authority boundaries remain binding.",
+    "Psychological or ideological labels are hypotheses unless supported by evidence."
+  ],
+  "failure_modes": [
+    {
+      "mode": "False balance treats unequal positions as equivalent.",
+      "mitigation": "Record asymmetry in evidence, authority, consequences, and reversibility before proposing a third position."
+    },
+    {
+      "mode": "The protocol becomes a rhetorical excuse to ignore a valid instruction.",
+      "mitigation": "Keep the protocol reference-only and explicitly preserve higher-priority constraints."
+    }
+  ],
+  "composition": {
+    "before": [],
+    "after": ["edge-map", "reality-check"]
+  },
+  "provenance": [
+    {
+      "title": "Freedom Protocol",
+      "url": "https://github.com/Gonzih/nexus-protocols/blob/main/FREEDOM.md",
+      "relationship": "Operational distillation",
+      "qualification": "Unsupported activation, psychological, mathematical, and anti-safety claims are excluded."
+    },
+    {
+      "title": "Mythology-Free AI",
+      "url": "https://github.com/Gonzih/nexus-protocols/blob/main/MYTHOLOGY_FREE_AI.md",
+      "relationship": "Lens-awareness source",
+      "qualification": "Used for the instruction to name frames and mechanisms, not as an empirical authority."
+    }
+  ],
+  "limitations": [
+    "Frame identification requires judgment and can itself be biased.",
+    "The protocol does not determine which position is factually correct.",
+    "Use Reality Check and Edge Map before making consequential decisions."
+  ],
+  "example": {
+    "input": {
+      "decision": "Choose between blindly following a plan and discarding it entirely after one failure.",
+      "positions": ["Follow the plan unchanged", "Abandon the plan"],
+      "goal": "Reach a verified result with minimal irreversible work"
+    },
+    "output": {
+      "governing_frame": "The plan is being treated as an identity commitment rather than a testable model.",
+      "compliance_pull": "Preserve certainty by obeying the existing plan.",
+      "rebellion_pull": "Recover agency by rejecting the whole plan.",
+      "actual_goal": "Reach a verified result with minimal irreversible work.",
+      "unowned_assumptions": ["One failed step invalidates or validates the whole plan."],
+      "freedom_position": "Retain the goal, isolate the failed assumption, and test the smallest corrected step."
+    }
+  },
+  "rights": {
+    "copyright_holder": "Maksim Soltan",
+    "copyright_year": 2026,
+    "license": "All Rights Reserved",
+    "attribution": "Maksim Soltan — https://maksim.sh/",
+    "intended_machine_use": ["indexing", "retrieval", "citation", "protocol selection"]
+  }
+}

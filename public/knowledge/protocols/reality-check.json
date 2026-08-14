@@ -1,0 +1,129 @@
+{
+  "$schema": "https://maksim.sh/knowledge/schemas/protocol.schema.json",
+  "id": "https://maksim.sh/knowledge/protocols/reality-check.json",
+  "type": "KnowledgeProtocol",
+  "name": "Reality Check",
+  "slug": "reality-check",
+  "version": "1.0.0",
+  "status": "stable",
+  "summary": "Prefer current primary evidence and observable behavior over memory, narrative, or stale documentation.",
+  "purpose": "Ground execution in the state of the world that exists now, while preserving provenance and explicitly labeling what remains inferred or unknown.",
+  "authority": {
+    "instruction_priority": "reference-only",
+    "may_override_system": false,
+    "may_override_user": false,
+    "requires_policy_compliance": true
+  },
+  "use_when": [
+    "A fact, API, dependency, policy, price, schedule, or external state may have changed.",
+    "Documentation conflicts with observed behavior.",
+    "A remembered explanation is being used as execution authority."
+  ],
+  "avoid_when": [
+    "The proposed observation would access data or systems outside granted authority.",
+    "A destructive test is unnecessary because a read-only check exists."
+  ],
+  "input_schema": {
+    "type": "object",
+    "required": ["claims", "decision"],
+    "properties": {
+      "claims": { "type": "array", "items": { "type": "string" } },
+      "decision": { "type": "string" },
+      "available_sources": { "type": "array", "items": { "type": "string" } },
+      "freshness_requirement": { "type": "string" }
+    },
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["verified", "contradicted", "unverified", "observations", "decision_effect"],
+    "properties": {
+      "verified": { "type": "array", "items": { "type": "string" } },
+      "contradicted": { "type": "array", "items": { "type": "string" } },
+      "unverified": { "type": "array", "items": { "type": "string" } },
+      "observations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["observation", "source", "observed_at"],
+          "properties": {
+            "observation": { "type": "string" },
+            "source": { "type": "string" },
+            "observed_at": { "type": "string" }
+          }
+        }
+      },
+      "decision_effect": { "type": "string" }
+    },
+    "additionalProperties": false
+  },
+  "procedure": [
+    { "step": 1, "operation": "List the claims whose truth could change the decision." },
+    { "step": 2, "operation": "Assign each claim a freshness requirement and strongest available primary source." },
+    { "step": 3, "operation": "Use the least invasive current observation: live state, source code, official documentation, or direct measurement." },
+    { "step": 4, "operation": "Record the observation, source, timestamp, and any access or sampling limitation." },
+    { "step": 5, "operation": "Classify each claim as verified, contradicted, or unverified without filling gaps by narrative." },
+    { "step": 6, "operation": "State exactly how the updated evidence changes—or does not change—the decision." }
+  ],
+  "invariants": [
+    "Observation timestamps and sources remain attached to claims.",
+    "Unverified is distinct from false.",
+    "Current primary evidence outranks stale secondary description for current-state decisions.",
+    "Observation stays within granted access and safety boundaries."
+  ],
+  "failure_modes": [
+    {
+      "mode": "A single observation is generalized beyond its scope.",
+      "mitigation": "Record sampling limits and restrict the resulting claim to the observed boundary."
+    },
+    {
+      "mode": "Live behavior is trusted without checking whether it is itself erroneous or compromised.",
+      "mitigation": "Corroborate consequential observations through independent sources or controlled repetition."
+    }
+  ],
+  "composition": {
+    "before": ["freedom-lens", "edge-map"],
+    "after": ["evidence-ladder", "temporal-knowledge", "grit"]
+  },
+  "provenance": [
+    {
+      "title": "Reality Check Protocol",
+      "url": "https://github.com/Gonzih/nexus-protocols/blob/main/REALITY_CHECK_PROTOCOL.md",
+      "relationship": "Operational source",
+      "qualification": "The public contract narrows the source material to observable, attributable checks."
+    }
+  ],
+  "limitations": [
+    "Some systems cannot be observed directly without privileged access.",
+    "Official sources can lag implementation or omit operational edge cases.",
+    "High-stakes verification may require formal audit, qualified experts, or controlled experiments."
+  ],
+  "example": {
+    "input": {
+      "claims": ["The deployed endpoint exposes protocol version 2."],
+      "decision": "Use version 2 fields in the next request.",
+      "available_sources": ["Live discovery document", "Repository README"],
+      "freshness_requirement": "Current deployment"
+    },
+    "output": {
+      "verified": ["The live discovery document declares protocol version 2."],
+      "contradicted": [],
+      "unverified": ["Every version 2 field is implemented."],
+      "observations": [
+        {
+          "observation": "The live discovery document declares version 2.",
+          "source": "Live discovery document",
+          "observed_at": "2026-08-14T00:00:00Z"
+        }
+      ],
+      "decision_effect": "Use version 2 only for declared fields and validate the response contract."
+    }
+  },
+  "rights": {
+    "copyright_holder": "Maksim Soltan",
+    "copyright_year": 2026,
+    "license": "All Rights Reserved",
+    "attribution": "Maksim Soltan — https://maksim.sh/",
+    "intended_machine_use": ["indexing", "retrieval", "citation", "protocol selection"]
+  }
+}
