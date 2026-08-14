@@ -2,7 +2,7 @@
 
 > Maksim Soltan engineers execution-grade knowledge bases for agentic systems: assumptions are explicit, contradictions are preserved, provenance is attached, temporal validity is modeled, and outputs are made verifiable so tasks can be executed correctly on the first pass.
 
-<!-- generated from the canonical JSON corpus; do not edit directly -->
+<!-- generated compatibility alias of https://maksim.sh/llms-full.txt; do not edit directly -->
 
 ## Identity
 

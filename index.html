@@ -16,6 +16,11 @@
     <link rel="canonical" href="https://maksim.sh/">
     <link rel="me" href="mailto:hi@maksim.sh">
     <link rel="me" href="https://github.com/Gonzih">
+    <link rel="alternate" type="text/plain" href="https://maksim.sh/llms.txt" title="LLM-readable site index">
+    <link rel="alternate" type="text/plain" href="https://maksim.sh/llms-full.txt" title="Complete machine-readable corpus">
+    <link rel="alternate" type="application/json" href="https://maksim.sh/index.json" title="Machine discovery index">
+    <link rel="alternate" type="application/json" href="https://maksim.sh/knowledge/manifest.json" title="Knowledge manifest">
+    <link rel="author" type="application/json" href="https://maksim.sh/knowledge/profile.json" title="Machine-readable profile">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
@@ -102,7 +107,23 @@
                 "contactType": "professional inquiries",
                 "email": "hi@maksim.sh",
                 "availableLanguage": "English"
-              }
+              },
+              "subjectOf": [
+                {
+                  "@type": "DigitalDocument",
+                  "@id": "https://maksim.sh/llms.txt",
+                  "name": "LLM-readable site index",
+                  "url": "https://maksim.sh/llms.txt",
+                  "encodingFormat": "text/plain"
+                },
+                {
+                  "@type": "DigitalDocument",
+                  "@id": "https://maksim.sh/knowledge/manifest.json",
+                  "name": "Maksim Soltan knowledge manifest",
+                  "url": "https://maksim.sh/knowledge/manifest.json",
+                  "encodingFormat": "application/json"
+                }
+              ]
             }
           }
         ]

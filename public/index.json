@@ -1,0 +1,63 @@
+{
+  "$schema": "https://maksim.sh/knowledge/schemas/discovery.schema.json",
+  "id": "https://maksim.sh/index.json",
+  "type": "MachineDiscoveryIndex",
+  "version": "1.0.0",
+  "updated": "2026-08-14",
+  "canonical": "https://maksim.sh/",
+  "generated_by": "scripts/generate-knowledge.mjs",
+  "entrypoints": [
+    {
+      "rel": "llms-index",
+      "url": "https://maksim.sh/llms.txt",
+      "media_type": "text/plain",
+      "purpose": "Compact site identity, retrieval policy, and canonical corpus links."
+    },
+    {
+      "rel": "llms-full",
+      "url": "https://maksim.sh/llms-full.txt",
+      "media_type": "text/plain",
+      "purpose": "Complete profile, protocol, and evidence corpus in one document."
+    },
+    {
+      "rel": "knowledge-manifest",
+      "url": "https://maksim.sh/knowledge/manifest.json",
+      "media_type": "application/json",
+      "purpose": "Versioned discovery graph, retrieval policy, collections, and capability boundaries."
+    },
+    {
+      "rel": "profile",
+      "url": "https://maksim.sh/knowledge/profile.json",
+      "media_type": "application/json",
+      "purpose": "Machine-readable identity, method, contact, and focus."
+    },
+    {
+      "rel": "protocol-index",
+      "url": "https://maksim.sh/knowledge/protocols/index.json",
+      "media_type": "application/json",
+      "purpose": "Protocol selection, composition, status, and canonical contract URLs."
+    },
+    {
+      "rel": "evidence-index",
+      "url": "https://maksim.sh/knowledge/evidence/index.json",
+      "media_type": "application/json",
+      "purpose": "Claims, implementation evidence, qualifications, and limitations."
+    }
+  ],
+  "aliases": {
+    "manifest": "https://maksim.sh/manifest.json",
+    "profile": "https://maksim.sh/identity.json",
+    "corpus": "https://maksim.sh/corpus.md",
+    "protocol_index_json": "https://maksim.sh/protocols/index.json",
+    "protocol_index_markdown": "https://maksim.sh/protocols/index.md"
+  },
+  "capabilities": {
+    "static_knowledge": true,
+    "versioned_protocols": true,
+    "machine_readable_evidence": true,
+    "live_agent": false,
+    "mcp_endpoint": false,
+    "a2a_endpoint": false,
+    "reason": "This release publishes deterministic knowledge artifacts only. It does not advertise an endpoint that does not exist."
+  }
+}

@@ -1,4 +1,11 @@
+# generated from https://maksim.sh/knowledge/manifest.json
 User-agent: *
 Allow: /
 
 Sitemap: https://maksim.sh/sitemap.xml
+
+# Machine-readable discovery; comments are advisory, canonical URLs are exact.
+# LLM index: https://maksim.sh/llms.txt
+# Full corpus: https://maksim.sh/llms-full.txt
+# JSON discovery index: https://maksim.sh/index.json
+# Knowledge manifest: https://maksim.sh/knowledge/manifest.json

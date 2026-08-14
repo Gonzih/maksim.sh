@@ -65,8 +65,9 @@ const manifest = await readJson(path.join(knowledgeDir, "manifest.json"));
 const profile = await readJson(path.join(knowledgeDir, "profile.json"));
 const protocolIndex = await readJson(path.join(protocolDir, "index.json"));
 const evidence = await readJson(path.join(knowledgeDir, "evidence", "index.json"));
+const siteIndex = await readJson(path.join(publicDir, "index.json"));
 
-if (!manifest || !profile || !protocolIndex || !evidence) {
+if (!manifest || !profile || !protocolIndex || !evidence || !siteIndex) {
   fail("Core knowledge documents could not be loaded.");
 } else {
   if (manifest.canonical !== "https://maksim.sh/") fail("Manifest canonical URL is incorrect.");
@@ -74,6 +75,20 @@ if (!manifest || !profile || !protocolIndex || !evidence) {
   if (profile.contact.email !== "mailto:hi@maksim.sh") fail("Profile contact email is incorrect.");
   if (protocolIndex.protocols.length !== 13) fail("Protocol index must contain exactly 13 protocols in v1.");
   if (!Array.isArray(evidence.claims) || evidence.claims.length === 0) fail("Evidence index has no claims.");
+  if (siteIndex.id !== "https://maksim.sh/index.json") fail("Machine discovery index URL is incorrect.");
+  if (siteIndex.type !== "MachineDiscoveryIndex") fail("Machine discovery index type is incorrect.");
+
+  const indexedEntrypoints = new Set(siteIndex.entrypoints?.map(({ url }) => url));
+  for (const url of [
+    manifest.discovery.llms,
+    manifest.discovery.llms_full,
+    manifest.id,
+    manifest.profile,
+    manifest.discovery.protocol_index_json,
+    manifest.discovery.evidence_index_json,
+  ]) {
+    if (!indexedEntrypoints.has(url)) fail(`Machine discovery index is missing ${url}.`);
+  }
 }
 
 const indexedSlugs = new Set();
@@ -119,11 +134,16 @@ for (const slug of protocolFiles) {
 }
 
 const expectedGenerated = [
+  "index.json",
   "llms.txt",
   "llms-full.txt",
+  "corpus.md",
   "knowledge/index.md",
   "knowledge/protocols/index.md",
   "knowledge/evidence/index.md",
+  "protocols/index.md",
+  "robots.txt",
+  "sitemap.xml",
 ];
 
 for (const relativePath of expectedGenerated) {
@@ -134,6 +154,94 @@ for (const relativePath of expectedGenerated) {
   }
   const content = await readFile(filePath, "utf8");
   if (!content.includes("generated")) fail(`${relativePath} is missing its generated marker.`);
+}
+
+const jsonAliases = [
+  ["manifest.json", "knowledge/manifest.json"],
+  ["identity.json", "knowledge/profile.json"],
+  ["protocols/index.json", "knowledge/protocols/index.json"],
+];
+
+for (const [aliasPath, canonicalPath] of jsonAliases) {
+  const alias = await readJson(path.join(publicDir, aliasPath));
+  const canonical = await readJson(path.join(publicDir, canonicalPath));
+  if (alias && canonical && JSON.stringify(alias) !== JSON.stringify(canonical)) {
+    fail(`${aliasPath} does not match ${canonicalPath}.`);
+  }
+}
+
+const llmsContent = await readFile(path.join(publicDir, "llms.txt"), "utf8");
+if (!llmsContent.startsWith("# Maksim Soltan\n\n> ")) {
+  fail("llms.txt must begin with the specification's H1 and summary blockquote.");
+}
+
+for (const url of [
+  manifest?.discovery?.site_index,
+  manifest?.id,
+  manifest?.discovery?.llms_full,
+  manifest?.profile,
+  manifest?.discovery?.protocol_index_json,
+  manifest?.discovery?.evidence_index_json,
+]) {
+  if (url && !llmsContent.includes(`[${url}](${url})`)) {
+    fail(`llms.txt does not expose ${url} as visible absolute link text.`);
+  }
+}
+
+if (!llmsContent.includes("Do not guess resource paths.")) {
+  fail("llms.txt is missing its anti-guessing retrieval instruction.");
+}
+
+const sitemapContent = await readFile(path.join(publicDir, "sitemap.xml"), "utf8");
+if (!sitemapContent.startsWith('<?xml version="1.0" encoding="UTF-8"?>')) {
+  fail("sitemap.xml must begin with its XML declaration.");
+}
+
+const sitemapUrls = new Set(
+  [...sitemapContent.matchAll(/<loc>(https:\/\/maksim\.sh\/[^<]*)<\/loc>/g)].map(
+    ([, url]) => url,
+  ),
+);
+
+for (const url of [
+  manifest?.canonical,
+  manifest?.discovery?.site_index,
+  manifest?.discovery?.llms,
+  manifest?.discovery?.llms_full,
+  manifest?.id,
+  manifest?.profile,
+  manifest?.discovery?.protocol_index_json,
+  manifest?.discovery?.evidence_index_json,
+  ...(protocolIndex?.protocols ?? []).flatMap((protocol) => [
+    protocol.json,
+    protocol.markdown,
+  ]),
+]) {
+  if (url && !sitemapUrls.has(url)) fail(`sitemap.xml is missing ${url}.`);
+}
+
+const robotsContent = await readFile(path.join(publicDir, "robots.txt"), "utf8");
+for (const url of [
+  manifest?.discovery?.sitemap,
+  manifest?.discovery?.llms,
+  manifest?.discovery?.llms_full,
+  manifest?.discovery?.site_index,
+  manifest?.id,
+]) {
+  if (url && !robotsContent.includes(url)) fail(`robots.txt is missing ${url}.`);
+}
+
+const homepageContent = await readFile(path.join(rootDir, "index.html"), "utf8");
+for (const url of [
+  manifest?.discovery?.llms,
+  manifest?.discovery?.llms_full,
+  manifest?.discovery?.site_index,
+  manifest?.id,
+  manifest?.profile,
+]) {
+  if (url && !homepageContent.includes(`href="${url}"`)) {
+    fail(`index.html is missing a nonvisual discovery link for ${url}.`);
+  }
 }
 
 const allPublicFiles = await walk(publicDir);
@@ -157,7 +265,7 @@ for (const filePath of allPublicFiles) {
 
 const internalUrls = new Set();
 for (const filePath of allPublicFiles) {
-  if (![".json", ".md", ".txt"].includes(path.extname(filePath))) continue;
+  if (![".json", ".md", ".txt", ".xml"].includes(path.extname(filePath))) continue;
   const content = await readFile(filePath, "utf8");
   for (const match of content.matchAll(/https:\/\/maksim\.sh\/[A-Za-z0-9._~%+\/-]*/g)) {
     internalUrls.add(match[0]);

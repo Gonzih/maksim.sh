@@ -1,0 +1,192 @@
+{
+  "id": "https://maksim.sh/knowledge/protocols/index.json",
+  "type": "ProtocolCollection",
+  "version": "1.0.0",
+  "updated": "2026-08-14",
+  "schema": "https://maksim.sh/knowledge/schemas/protocol.schema.json",
+  "description": "Composable knowledge-engineering protocols. Load only the protocols relevant to the task; do not inject the complete collection by default.",
+  "default_pipeline": [
+    "freedom-lens",
+    "edge-map",
+    "reality-check",
+    "context-firewall",
+    "backpressure",
+    "grit",
+    "evidence-ladder",
+    "temporal-knowledge",
+    "execution-pack"
+  ],
+  "selection": [
+    {
+      "signal": "The request contains a false binary, ideological collision, or incompatible frames.",
+      "load": [
+        "freedom-lens",
+        "edge-map"
+      ]
+    },
+    {
+      "signal": "Facts may be stale, remembered, or detached from primary evidence.",
+      "load": [
+        "reality-check",
+        "evidence-ladder",
+        "temporal-knowledge"
+      ]
+    },
+    {
+      "signal": "Context from another task, user, tenant, or time period could leak into execution.",
+      "load": [
+        "context-firewall"
+      ]
+    },
+    {
+      "signal": "The task is broad, blocked, or failing repeatedly.",
+      "load": [
+        "backpressure",
+        "grit"
+      ]
+    },
+    {
+      "signal": "Multiple models or specialists disagree.",
+      "load": [
+        "disagreement-preserving-convergence",
+        "edge-map",
+        "evidence-ladder"
+      ]
+    },
+    {
+      "signal": "An agent run must be inspectable, replayable, or branchable.",
+      "load": [
+        "reproducible-agent-run",
+        "evidence-ladder"
+      ]
+    },
+    {
+      "signal": "The system proposes modifying its own tools, policies, or runtime behavior.",
+      "load": [
+        "governed-self-modification",
+        "reproducible-agent-run"
+      ]
+    },
+    {
+      "signal": "A behavior must survive paraphrase, compression, translation, or adversarial transformation.",
+      "load": [
+        "invariant-preserving-transformation",
+        "edge-map"
+      ]
+    },
+    {
+      "signal": "Refined knowledge is ready to be handed to an execution agent.",
+      "load": [
+        "execution-pack",
+        "evidence-ladder",
+        "reproducible-agent-run"
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "slug": "freedom-lens",
+      "name": "Freedom Lens",
+      "status": "experimental",
+      "summary": "Escape compliance-versus-rebellion oscillation and identify the frame actually governing the decision.",
+      "json": "https://maksim.sh/knowledge/protocols/freedom-lens.json",
+      "markdown": "https://maksim.sh/knowledge/protocols/freedom-lens.md"
+    },
+    {
+      "slug": "edge-map",
+      "name": "Edge Map",
+      "status": "stable",
+      "summary": "Preserve material contradictions and turn them into the smallest discriminating probe.",
+      "json": "https://maksim.sh/knowledge/protocols/edge-map.json",
+      "markdown": "https://maksim.sh/knowledge/protocols/edge-map.md"
+    },
+    {
+      "slug": "reality-check",
+      "name": "Reality Check",
+      "status": "stable",
+      "summary": "Prefer current primary evidence and observable behavior over memory, narrative, or stale documentation.",
+      "json": "https://maksim.sh/knowledge/protocols/reality-check.json",
+      "markdown": "https://maksim.sh/knowledge/protocols/reality-check.md"
+    },
+    {
+      "slug": "context-firewall",
+      "name": "Context Firewall",
+      "status": "stable",
+      "summary": "Prevent unverified context from crossing task, tenant, identity, temporal, or authority boundaries.",
+      "json": "https://maksim.sh/knowledge/protocols/context-firewall.json",
+      "markdown": "https://maksim.sh/knowledge/protocols/context-firewall.md"
+    },
+    {
+      "slug": "backpressure",
+      "name": "Backpressure",
+      "status": "stable",
+      "summary": "Treat repeated friction as information about a mismatched model, interface, dependency, or scope.",
+      "json": "https://maksim.sh/knowledge/protocols/backpressure.json",
+      "markdown": "https://maksim.sh/knowledge/protocols/backpressure.md"
+    },
+    {
+      "slug": "grit",
+      "name": "GRIT",
+      "status": "stable",
+      "summary": "Reduce work to the smallest verifiable component, change one variable, measure, and repeat.",
+      "json": "https://maksim.sh/knowledge/protocols/grit.json",
+      "markdown": "https://maksim.sh/knowledge/protocols/grit.md"
+    },
+    {
+      "slug": "evidence-ladder",
+      "name": "Evidence Ladder",
+      "status": "stable",
+      "summary": "Record the transformation from request to conclusion as an append-only, inspectable evidence chain.",
+      "json": "https://maksim.sh/knowledge/protocols/evidence-ladder.json",
+      "markdown": "https://maksim.sh/knowledge/protocols/evidence-ladder.md"
+    },
+    {
+      "slug": "temporal-knowledge",
+      "name": "Temporal Knowledge",
+      "status": "experimental",
+      "summary": "Represent knowledge as sourced assertions with transaction time, validity intervals, supersession, and policy weights.",
+      "json": "https://maksim.sh/knowledge/protocols/temporal-knowledge.json",
+      "markdown": "https://maksim.sh/knowledge/protocols/temporal-knowledge.md"
+    },
+    {
+      "slug": "disagreement-preserving-convergence",
+      "name": "Disagreement-Preserving Convergence",
+      "status": "experimental",
+      "summary": "Map agreement and disagreement across independent responses without relabeling consensus as truth.",
+      "json": "https://maksim.sh/knowledge/protocols/disagreement-preserving-convergence.json",
+      "markdown": "https://maksim.sh/knowledge/protocols/disagreement-preserving-convergence.md"
+    },
+    {
+      "slug": "reproducible-agent-run",
+      "name": "Reproducible Agent Run",
+      "status": "stable",
+      "summary": "Capture enough execution state to replay, branch, compare, and audit an agent run.",
+      "json": "https://maksim.sh/knowledge/protocols/reproducible-agent-run.json",
+      "markdown": "https://maksim.sh/knowledge/protocols/reproducible-agent-run.md"
+    },
+    {
+      "slug": "governed-self-modification",
+      "name": "Governed Self-Modification",
+      "status": "experimental",
+      "summary": "Gate runtime self-modification through validation, contract tests, atomic activation, observation, and rollback.",
+      "json": "https://maksim.sh/knowledge/protocols/governed-self-modification.json",
+      "markdown": "https://maksim.sh/knowledge/protocols/governed-self-modification.md"
+    },
+    {
+      "slug": "invariant-preserving-transformation",
+      "name": "Invariant-Preserving Transformation",
+      "status": "research",
+      "summary": "Define behavioral invariants, transform the representation, and map where the invariant fails.",
+      "json": "https://maksim.sh/knowledge/protocols/invariant-preserving-transformation.json",
+      "markdown": "https://maksim.sh/knowledge/protocols/invariant-preserving-transformation.md"
+    },
+    {
+      "slug": "execution-pack",
+      "name": "Execution Pack",
+      "status": "stable",
+      "summary": "Compile refined knowledge into a bounded, attributable, verifiable handoff an agent can execute without reconstructing the task from conversation history.",
+      "json": "https://maksim.sh/knowledge/protocols/execution-pack.json",
+      "markdown": "https://maksim.sh/knowledge/protocols/execution-pack.md"
+    }
+  ]
+}

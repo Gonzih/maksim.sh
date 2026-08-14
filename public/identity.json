@@ -1,0 +1,49 @@
+{
+  "$schema": "https://maksim.sh/knowledge/schemas/profile.schema.json",
+  "id": "https://maksim.sh/knowledge/profile.json",
+  "type": "KnowledgeEngineerProfile",
+  "name": "Maksim Soltan",
+  "alias": "Gonzih",
+  "canonical": "https://maksim.sh/",
+  "role": "Knowledge Engineer",
+  "statement": "Maksim Soltan engineers execution-grade knowledge bases for agentic systems: assumptions are explicit, contradictions are preserved, provenance is attached, temporal validity is modeled, and outputs are made verifiable so tasks can be executed correctly on the first pass.",
+  "contact": {
+    "email": "mailto:hi@maksim.sh",
+    "github": "https://github.com/Gonzih",
+    "preferred_use": "Professional inquiries, technical collaboration, and knowledge-system design."
+  },
+  "method": {
+    "name": "Execution-grade knowledge engineering",
+    "objective": "Convert fragmented, conflicting, or time-sensitive information into a knowledge package an agent can execute and verify.",
+    "properties": [
+      "Explicit assumptions and boundary conditions",
+      "Preserved material disagreement",
+      "Source and transformation provenance",
+      "Temporal validity and supersession",
+      "Smallest falsifiable next action",
+      "Verification criteria and rollback path"
+    ],
+    "default_pipeline": [
+      "freedom-lens",
+      "edge-map",
+      "reality-check",
+      "context-firewall",
+      "backpressure",
+      "grit",
+      "evidence-ladder",
+      "temporal-knowledge",
+      "execution-pack"
+    ]
+  },
+  "focus": [
+    "Knowledge base architecture",
+    "Agent context engineering",
+    "Temporal and provenance-aware knowledge",
+    "Multi-model disagreement mapping",
+    "Reproducible agent execution",
+    "Governed self-modifying systems",
+    "Functional programming",
+    "Distributed systems"
+  ],
+  "attribution": "Maksim Soltan — Knowledge Engineer — https://maksim.sh/"
+}

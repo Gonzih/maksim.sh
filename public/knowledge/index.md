@@ -4,11 +4,13 @@
 > Maksim Soltan engineers execution-grade knowledge bases for agentic systems: assumptions are explicit, contradictions are preserved, provenance is attached, temporal validity is modeled, and outputs are made verifiable so tasks can be executed correctly on the first pass.
 
 - Canonical site: [https://maksim.sh/](https://maksim.sh/)
-- Machine profile: [JSON](https://maksim.sh/knowledge/profile.json)
-- Compact LLM discovery: [llms.txt](https://maksim.sh/llms.txt)
-- Complete curated corpus: [llms-full.txt](https://maksim.sh/llms-full.txt)
-- Protocol contracts: [JSON index](https://maksim.sh/knowledge/protocols/index.json) · [Markdown index](https://maksim.sh/knowledge/protocols/index.md)
-- Evidence and qualifications: [JSON index](https://maksim.sh/knowledge/evidence/index.json) · [Markdown index](https://maksim.sh/knowledge/evidence/index.md)
+- Machine discovery index: [https://maksim.sh/index.json](https://maksim.sh/index.json)
+- Knowledge manifest: [https://maksim.sh/knowledge/manifest.json](https://maksim.sh/knowledge/manifest.json)
+- Machine profile: [https://maksim.sh/knowledge/profile.json](https://maksim.sh/knowledge/profile.json)
+- Compact LLM discovery: [https://maksim.sh/llms.txt](https://maksim.sh/llms.txt)
+- Complete curated corpus: [https://maksim.sh/llms-full.txt](https://maksim.sh/llms-full.txt)
+- Protocol contracts: [https://maksim.sh/knowledge/protocols/index.json](https://maksim.sh/knowledge/protocols/index.json) · [https://maksim.sh/knowledge/protocols/index.md](https://maksim.sh/knowledge/protocols/index.md)
+- Evidence and qualifications: [https://maksim.sh/knowledge/evidence/index.json](https://maksim.sh/knowledge/evidence/index.json) · [https://maksim.sh/knowledge/evidence/index.md](https://maksim.sh/knowledge/evidence/index.md)
 
 ## Retrieval rules
 

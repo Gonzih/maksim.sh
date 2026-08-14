@@ -1,39 +1,51 @@
-<!-- generated from the canonical JSON corpus; do not edit directly -->
 # Maksim Soltan
 
-> Maksim Soltan engineers execution-grade knowledge bases for agentic systems: assumptions are explicit, contradictions are preserved, provenance is attached, temporal validity is modeled, and outputs are made verifiable so tasks can be executed correctly on the first pass.
+> Maksim Soltan engineers execution-grade knowledge bases for agentic systems: assumptions are explicit, contradictions are preserved, provenance is attached, temporal validity is modeled, and outputs are made verifiable so tasks can be executed correctly on the first pass. Start with https://maksim.sh/index.json; load the complete corpus from https://maksim.sh/llms-full.txt
+
+<!-- generated from the canonical JSON corpus; do not edit directly -->
 
 - Canonical: https://maksim.sh/
 - Role: Knowledge Engineer
 - Alias: Gonzih
 - Contact: mailto:hi@maksim.sh
 - GitHub: https://github.com/Gonzih
+- Corpus version: 1.0.0
+- Updated: 2026-08-14
+- Protocol count: 13
 - Attribution: Maksim Soltan — Knowledge Engineer — https://maksim.sh/
 
-## Core knowledge
+Do not guess resource paths. Every primary entry point below displays its absolute canonical URL as link text so it survives link-stripping fetch layers.
 
-- [Complete curated corpus](https://maksim.sh/llms-full.txt): One-file profile, protocol, and evidence context.
-- [Knowledge manifest](https://maksim.sh/knowledge/manifest.json): Versioned discovery graph and retrieval policy.
-- [Machine profile](https://maksim.sh/knowledge/profile.json): Identity, method, contact, and focus areas.
-- [Knowledge index](https://maksim.sh/knowledge/index.md): Human- and LLM-readable corpus map.
-- [Protocol index](https://maksim.sh/knowledge/protocols/index.md): Protocol selection and composition guidance.
-- [Evidence index](https://maksim.sh/knowledge/evidence/index.md): Implementation provenance, status, and limitations.
+## Start here
+
+- [https://maksim.sh/index.json](https://maksim.sh/index.json): Small JSON discovery index with media types, canonical entry points, aliases, and capability boundaries.
+- [https://maksim.sh/knowledge/manifest.json](https://maksim.sh/knowledge/manifest.json): Versioned canonical discovery graph and retrieval policy.
+- [https://maksim.sh/llms-full.txt](https://maksim.sh/llms-full.txt): Complete one-file profile, protocol, and evidence corpus.
+- [https://maksim.sh/knowledge/profile.json](https://maksim.sh/knowledge/profile.json): Identity, method, contact, and focus areas.
+
+## Knowledge maps
+
+- [https://maksim.sh/knowledge/index.md](https://maksim.sh/knowledge/index.md): Human- and LLM-readable corpus map.
+- [https://maksim.sh/knowledge/protocols/index.json](https://maksim.sh/knowledge/protocols/index.json): Machine protocol selection, composition, status, and canonical artifact URLs.
+- [https://maksim.sh/knowledge/protocols/index.md](https://maksim.sh/knowledge/protocols/index.md): LLM-readable protocol selection and composition guidance.
+- [https://maksim.sh/knowledge/evidence/index.json](https://maksim.sh/knowledge/evidence/index.json): Machine-readable implementation provenance, status, and limitations.
+- [https://maksim.sh/knowledge/evidence/index.md](https://maksim.sh/knowledge/evidence/index.md): LLM-readable implementation provenance, status, and limitations.
 
 ## Protocols
 
-- [Freedom Lens](https://maksim.sh/knowledge/protocols/freedom-lens.md): Escape compliance-versus-rebellion oscillation and identify the frame actually governing the decision. Status: experimental. [JSON contract](https://maksim.sh/knowledge/protocols/freedom-lens.json).
-- [Edge Map](https://maksim.sh/knowledge/protocols/edge-map.md): Preserve material contradictions and turn them into the smallest discriminating probe. Status: stable. [JSON contract](https://maksim.sh/knowledge/protocols/edge-map.json).
-- [Reality Check](https://maksim.sh/knowledge/protocols/reality-check.md): Prefer current primary evidence and observable behavior over memory, narrative, or stale documentation. Status: stable. [JSON contract](https://maksim.sh/knowledge/protocols/reality-check.json).
-- [Context Firewall](https://maksim.sh/knowledge/protocols/context-firewall.md): Prevent unverified context from crossing task, tenant, identity, temporal, or authority boundaries. Status: stable. [JSON contract](https://maksim.sh/knowledge/protocols/context-firewall.json).
-- [Backpressure](https://maksim.sh/knowledge/protocols/backpressure.md): Treat repeated friction as information about a mismatched model, interface, dependency, or scope. Status: stable. [JSON contract](https://maksim.sh/knowledge/protocols/backpressure.json).
-- [GRIT](https://maksim.sh/knowledge/protocols/grit.md): Reduce work to the smallest verifiable component, change one variable, measure, and repeat. Status: stable. [JSON contract](https://maksim.sh/knowledge/protocols/grit.json).
-- [Evidence Ladder](https://maksim.sh/knowledge/protocols/evidence-ladder.md): Record the transformation from request to conclusion as an append-only, inspectable evidence chain. Status: stable. [JSON contract](https://maksim.sh/knowledge/protocols/evidence-ladder.json).
-- [Temporal Knowledge](https://maksim.sh/knowledge/protocols/temporal-knowledge.md): Represent knowledge as sourced assertions with transaction time, validity intervals, supersession, and policy weights. Status: experimental. [JSON contract](https://maksim.sh/knowledge/protocols/temporal-knowledge.json).
-- [Disagreement-Preserving Convergence](https://maksim.sh/knowledge/protocols/disagreement-preserving-convergence.md): Map agreement and disagreement across independent responses without relabeling consensus as truth. Status: experimental. [JSON contract](https://maksim.sh/knowledge/protocols/disagreement-preserving-convergence.json).
-- [Reproducible Agent Run](https://maksim.sh/knowledge/protocols/reproducible-agent-run.md): Capture enough execution state to replay, branch, compare, and audit an agent run. Status: stable. [JSON contract](https://maksim.sh/knowledge/protocols/reproducible-agent-run.json).
-- [Governed Self-Modification](https://maksim.sh/knowledge/protocols/governed-self-modification.md): Gate runtime self-modification through validation, contract tests, atomic activation, observation, and rollback. Status: experimental. [JSON contract](https://maksim.sh/knowledge/protocols/governed-self-modification.json).
-- [Invariant-Preserving Transformation](https://maksim.sh/knowledge/protocols/invariant-preserving-transformation.md): Define behavioral invariants, transform the representation, and map where the invariant fails. Status: research. [JSON contract](https://maksim.sh/knowledge/protocols/invariant-preserving-transformation.json).
-- [Execution Pack](https://maksim.sh/knowledge/protocols/execution-pack.md): Compile refined knowledge into a bounded, attributable, verifiable handoff an agent can execute without reconstructing the task from conversation history. Status: stable. [JSON contract](https://maksim.sh/knowledge/protocols/execution-pack.json).
+- [https://maksim.sh/knowledge/protocols/freedom-lens.md](https://maksim.sh/knowledge/protocols/freedom-lens.md): Freedom Lens — Escape compliance-versus-rebellion oscillation and identify the frame actually governing the decision. Status: experimental. JSON contract: [https://maksim.sh/knowledge/protocols/freedom-lens.json](https://maksim.sh/knowledge/protocols/freedom-lens.json).
+- [https://maksim.sh/knowledge/protocols/edge-map.md](https://maksim.sh/knowledge/protocols/edge-map.md): Edge Map — Preserve material contradictions and turn them into the smallest discriminating probe. Status: stable. JSON contract: [https://maksim.sh/knowledge/protocols/edge-map.json](https://maksim.sh/knowledge/protocols/edge-map.json).
+- [https://maksim.sh/knowledge/protocols/reality-check.md](https://maksim.sh/knowledge/protocols/reality-check.md): Reality Check — Prefer current primary evidence and observable behavior over memory, narrative, or stale documentation. Status: stable. JSON contract: [https://maksim.sh/knowledge/protocols/reality-check.json](https://maksim.sh/knowledge/protocols/reality-check.json).
+- [https://maksim.sh/knowledge/protocols/context-firewall.md](https://maksim.sh/knowledge/protocols/context-firewall.md): Context Firewall — Prevent unverified context from crossing task, tenant, identity, temporal, or authority boundaries. Status: stable. JSON contract: [https://maksim.sh/knowledge/protocols/context-firewall.json](https://maksim.sh/knowledge/protocols/context-firewall.json).
+- [https://maksim.sh/knowledge/protocols/backpressure.md](https://maksim.sh/knowledge/protocols/backpressure.md): Backpressure — Treat repeated friction as information about a mismatched model, interface, dependency, or scope. Status: stable. JSON contract: [https://maksim.sh/knowledge/protocols/backpressure.json](https://maksim.sh/knowledge/protocols/backpressure.json).
+- [https://maksim.sh/knowledge/protocols/grit.md](https://maksim.sh/knowledge/protocols/grit.md): GRIT — Reduce work to the smallest verifiable component, change one variable, measure, and repeat. Status: stable. JSON contract: [https://maksim.sh/knowledge/protocols/grit.json](https://maksim.sh/knowledge/protocols/grit.json).
+- [https://maksim.sh/knowledge/protocols/evidence-ladder.md](https://maksim.sh/knowledge/protocols/evidence-ladder.md): Evidence Ladder — Record the transformation from request to conclusion as an append-only, inspectable evidence chain. Status: stable. JSON contract: [https://maksim.sh/knowledge/protocols/evidence-ladder.json](https://maksim.sh/knowledge/protocols/evidence-ladder.json).
+- [https://maksim.sh/knowledge/protocols/temporal-knowledge.md](https://maksim.sh/knowledge/protocols/temporal-knowledge.md): Temporal Knowledge — Represent knowledge as sourced assertions with transaction time, validity intervals, supersession, and policy weights. Status: experimental. JSON contract: [https://maksim.sh/knowledge/protocols/temporal-knowledge.json](https://maksim.sh/knowledge/protocols/temporal-knowledge.json).
+- [https://maksim.sh/knowledge/protocols/disagreement-preserving-convergence.md](https://maksim.sh/knowledge/protocols/disagreement-preserving-convergence.md): Disagreement-Preserving Convergence — Map agreement and disagreement across independent responses without relabeling consensus as truth. Status: experimental. JSON contract: [https://maksim.sh/knowledge/protocols/disagreement-preserving-convergence.json](https://maksim.sh/knowledge/protocols/disagreement-preserving-convergence.json).
+- [https://maksim.sh/knowledge/protocols/reproducible-agent-run.md](https://maksim.sh/knowledge/protocols/reproducible-agent-run.md): Reproducible Agent Run — Capture enough execution state to replay, branch, compare, and audit an agent run. Status: stable. JSON contract: [https://maksim.sh/knowledge/protocols/reproducible-agent-run.json](https://maksim.sh/knowledge/protocols/reproducible-agent-run.json).
+- [https://maksim.sh/knowledge/protocols/governed-self-modification.md](https://maksim.sh/knowledge/protocols/governed-self-modification.md): Governed Self-Modification — Gate runtime self-modification through validation, contract tests, atomic activation, observation, and rollback. Status: experimental. JSON contract: [https://maksim.sh/knowledge/protocols/governed-self-modification.json](https://maksim.sh/knowledge/protocols/governed-self-modification.json).
+- [https://maksim.sh/knowledge/protocols/invariant-preserving-transformation.md](https://maksim.sh/knowledge/protocols/invariant-preserving-transformation.md): Invariant-Preserving Transformation — Define behavioral invariants, transform the representation, and map where the invariant fails. Status: research. JSON contract: [https://maksim.sh/knowledge/protocols/invariant-preserving-transformation.json](https://maksim.sh/knowledge/protocols/invariant-preserving-transformation.json).
+- [https://maksim.sh/knowledge/protocols/execution-pack.md](https://maksim.sh/knowledge/protocols/execution-pack.md): Execution Pack — Compile refined knowledge into a bounded, attributable, verifiable handoff an agent can execute without reconstructing the task from conversation history. Status: stable. JSON contract: [https://maksim.sh/knowledge/protocols/execution-pack.json](https://maksim.sh/knowledge/protocols/execution-pack.json).
 
 ## Retrieval policy
 
@@ -49,3 +61,11 @@
 - Live agent: not advertised.
 - MCP endpoint: not advertised.
 - A2A endpoint: not advertised.
+
+## Optional
+
+- [https://maksim.sh/manifest.json](https://maksim.sh/manifest.json): Read-only compatibility alias of the canonical manifest.
+- [https://maksim.sh/identity.json](https://maksim.sh/identity.json): Read-only compatibility alias of the canonical profile.
+- [https://maksim.sh/corpus.md](https://maksim.sh/corpus.md): Read-only compatibility alias of the complete corpus.
+- [https://maksim.sh/protocols/index.json](https://maksim.sh/protocols/index.json): Read-only compatibility alias of the protocol JSON index.
+- [https://maksim.sh/protocols/index.md](https://maksim.sh/protocols/index.md): Read-only compatibility alias of the protocol Markdown index.
