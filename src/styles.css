@@ -189,7 +189,7 @@ noscript {
   }
 
   .shell {
-    grid-template-rows: 1fr;
+    grid-template-rows: 1fr auto;
     padding:
       max(22px, env(safe-area-inset-top))
       max(20px, env(safe-area-inset-right))
@@ -213,8 +213,14 @@ noscript {
     font-size: 14px;
   }
 
-  .footer {
-    display: none;
+  .contact {
+    width: 46px;
+    height: 46px;
+  }
+
+  .contact svg {
+    width: 20px;
+    height: 20px;
   }
 }
 
