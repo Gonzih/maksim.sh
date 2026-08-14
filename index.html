@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#050508">
     <title>Maksim Soltan — Knowledge Engineer</title>
-    <meta name="description" content="Maksim Soltan — knowledge engineer.">
+    <meta
+      name="description"
+      content="Maksim Soltan builds traceable knowledge systems for retrieval, reasoning provenance, semantic memory, and autonomous agents."
+    >
     <meta name="author" content="Maksim Soltan">
     <meta name="contact" content="hi@maksim.sh">
     <meta name="robots" content="index, follow, max-image-preview:large">
@@ -18,7 +21,10 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
 
     <meta property="og:title" content="Maksim Soltan — Knowledge Engineer">
-    <meta property="og:description" content="Maksim Soltan — knowledge engineer.">
+    <meta
+      property="og:description"
+      content="Traceable knowledge systems for retrieval, reasoning provenance, semantic memory, and autonomous agents."
+    >
     <meta property="og:type" content="profile">
     <meta property="og:url" content="https://maksim.sh/">
     <meta property="og:site_name" content="maksim.sh">
@@ -33,38 +39,85 @@
     <meta property="og:image:height" content="630">
     <meta
       property="og:image:alt"
-      content="Maksim Soltan, knowledge engineer, surrounded by a luminous knowledge graph."
+      content="Maksim Soltan, knowledge engineer, within a luminous graph of retrieval, memory, and provenance."
     >
 
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:creator" content="@Gonzih">
     <meta name="twitter:title" content="Maksim Soltan — Knowledge Engineer">
-    <meta name="twitter:description" content="Maksim Soltan — knowledge engineer.">
+    <meta
+      name="twitter:description"
+      content="Traceable knowledge systems for retrieval, reasoning provenance, semantic memory, and autonomous agents."
+    >
     <meta name="twitter:image" content="https://maksim.sh/og.png">
     <meta
       name="twitter:image:alt"
-      content="Maksim Soltan, knowledge engineer, surrounded by a luminous knowledge graph."
+      content="Maksim Soltan, knowledge engineer, within a luminous graph of retrieval, memory, and provenance."
     >
 
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "Person",
-        "name": "Maksim Soltan",
-        "url": "https://maksim.sh/",
-        "jobTitle": "Knowledge Engineer",
-        "description": "Knowledge engineer.",
-        "email": "mailto:hi@maksim.sh",
-        "sameAs": ["https://github.com/Gonzih"],
-        "contactPoint": {
-          "@type": "ContactPoint",
-          "contactType": "personal inquiries",
-          "email": "hi@maksim.sh"
-        }
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://maksim.sh/#website",
+            "url": "https://maksim.sh/",
+            "name": "maksim.sh",
+            "alternateName": "Maksim Soltan",
+            "description": "Maksim Soltan's personal website."
+          },
+          {
+            "@type": "ProfilePage",
+            "@id": "https://maksim.sh/#profile",
+            "url": "https://maksim.sh/",
+            "name": "Maksim Soltan — Knowledge Engineer",
+            "description": "Maksim Soltan builds traceable knowledge systems for retrieval, reasoning provenance, semantic memory, and autonomous agents.",
+            "dateCreated": "2026-08-13",
+            "dateModified": "2026-08-14",
+            "isPartOf": {
+              "@id": "https://maksim.sh/#website"
+            },
+            "mainEntity": {
+              "@type": "Person",
+              "@id": "https://maksim.sh/#maksim",
+              "name": "Maksim Soltan",
+              "alternateName": "Gonzih",
+              "url": "https://maksim.sh/",
+              "jobTitle": "Knowledge Engineer",
+              "description": "Builds traceable knowledge systems for retrieval, reasoning provenance, semantic memory, and autonomous agents.",
+              "email": "mailto:hi@maksim.sh",
+              "sameAs": ["https://github.com/Gonzih"],
+              "knowsAbout": [
+                "Knowledge engineering",
+                "Information retrieval",
+                "Reasoning provenance",
+                "Semantic memory",
+                "Autonomous agent infrastructure",
+                "Functional programming",
+                "Distributed systems"
+              ],
+              "contactPoint": {
+                "@type": "ContactPoint",
+                "contactType": "professional inquiries",
+                "email": "hi@maksim.sh",
+                "availableLanguage": "English"
+              }
+            }
+          }
+        ]
       }
     </script>
   </head>
   <body>
-    <canvas id="field" aria-hidden="true"></canvas>
+    <canvas
+      id="field"
+      role="img"
+      aria-label="Animated knowledge topology connecting ontology, retrieval, provenance, semantics, memory, evaluation, interfaces, systems, structure, and evidence."
+    >
+      Animated knowledge topology connecting ontology, retrieval, provenance,
+      semantics, memory, evaluation, interfaces, systems, structure, and evidence.
+    </canvas>
     <div class="vignette" aria-hidden="true"></div>
 
     <main class="shell">
@@ -108,7 +161,9 @@
     </main>
 
     <noscript>
-      Maksim Soltan · knowledge engineer · github.com/Gonzih · hi@maksim.sh
+      Maksim Soltan is a knowledge engineer building traceable knowledge systems
+      for retrieval, reasoning provenance, semantic memory, and autonomous agents.
+      GitHub: github.com/Gonzih · Email: hi@maksim.sh
     </noscript>
     <script type="module" src="/src/main.js"></script>
   </body>
