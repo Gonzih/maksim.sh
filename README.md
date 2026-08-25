@@ -33,5 +33,8 @@ npm run social:preview
 npm run social:validate
 ```
 
+The generator keeps the name inside the centered 840×630 safe area used by
+taller, aspect-fill link cards such as iMessage.
+
 The GIF is the primary Open Graph and Twitter image. `public/og.png` remains the
 static fallback for crawlers that do not render animation.

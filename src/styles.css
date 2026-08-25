@@ -82,6 +82,19 @@ html[data-social-preview="true"] .footer {
   display: none;
 }
 
+html[data-social-preview="true"] .hero {
+  justify-self: center;
+  text-align: center;
+}
+
+html[data-social-preview="true"] .name .outline {
+  transform-origin: center;
+}
+
+html[data-social-preview="true"] .role {
+  margin-left: 0;
+}
+
 .contact-links {
   display: flex;
   align-items: center;

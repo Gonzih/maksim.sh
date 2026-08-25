@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdtemp, rm, stat } from "node:fs/promises";
+import { copyFile, mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,7 +8,8 @@ import { chromium } from "playwright";
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(scriptDir, "..");
 const frameDir = await mkdtemp(path.join(tmpdir(), "maksim-social-preview-"));
-const outputPath = path.join(rootDir, "public", "og-animated-v1.gif");
+const outputPath = path.join(rootDir, "public", "og-animated-v2.gif");
+const fallbackPath = path.join(rootDir, "public", "og.png");
 const host = "127.0.0.1";
 const port = 4175;
 const origin = `http://${host}:${port}`;
@@ -77,6 +78,15 @@ try {
   await page.waitForFunction(() => typeof window.__renderSocialPreviewFrame === "function");
   await page.evaluate(() => document.fonts.ready);
 
+  const nameBounds = await page.locator(".name").boundingBox();
+  const safeLeft = 180;
+  const safeRight = 1_020;
+  if (!nameBounds || nameBounds.x < safeLeft || nameBounds.x + nameBounds.width > safeRight) {
+    throw new Error(
+      `Preview name must fit the centered 840px iMessage safe area; received ${JSON.stringify(nameBounds)}.`,
+    );
+  }
+
   await page.evaluate(() => {
     for (let frame = 0; frame < 180; frame += 1) {
       window.__renderSocialPreviewFrame((frame / 179) * 3_200);
@@ -96,6 +106,8 @@ try {
       fullPage: false,
     });
   }
+
+  await copyFile(path.join(frameDir, "frame-000.png"), fallbackPath);
 
   await run("ffmpeg", [
     "-hide_banner",

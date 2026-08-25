@@ -4,12 +4,14 @@ import { fileURLToPath } from "node:url";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(scriptDir, "..");
-const gifPath = path.join(rootDir, "public", "og-animated-v1.gif");
+const gifPath = path.join(rootDir, "public", "og-animated-v2.gif");
+const pngPath = path.join(rootDir, "public", "og.png");
 const htmlPath = path.join(rootDir, "index.html");
 const failures = [];
 
 const fail = (message) => failures.push(message);
 const gif = await readFile(gifPath);
+const png = await readFile(pngPath);
 const html = await readFile(htmlPath, "utf8");
 const { size } = await stat(gifPath);
 
@@ -31,7 +33,14 @@ if (!gif.includes(Buffer.from("NETSCAPE2.0", "ascii"))) {
   fail("Animated social preview does not declare an infinite animation loop.");
 }
 
-const gifUrl = "https://maksim.sh/og-animated-v1.gif";
+const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+if (!png.subarray(0, 8).equals(pngSignature)) {
+  fail("Static social preview fallback is not a PNG file.");
+} else if (png.readUInt32BE(16) !== 1_200 || png.readUInt32BE(20) !== 630) {
+  fail(`Static social preview fallback is ${png.readUInt32BE(16)}x${png.readUInt32BE(20)}; expected 1200x630.`);
+}
+
+const gifUrl = "https://maksim.sh/og-animated-v2.gif";
 const pngUrl = "https://maksim.sh/og.png";
 const gifPosition = html.indexOf(`<meta property="og:image" content="${gifUrl}">`);
 const pngPosition = html.indexOf(`<meta property="og:image" content="${pngUrl}">`);
