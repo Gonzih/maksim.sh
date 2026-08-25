@@ -35,9 +35,14 @@ const PALETTE_RGB = PALETTE.map((value) => {
   return [parsed.r, parsed.g, parsed.b];
 });
 
+const socialPreviewMode = new URLSearchParams(window.location.search).has("social-preview");
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const pointer = { x: 0, y: 0, active: false, energy: 0 };
 const bursts = [];
+
+if (socialPreviewMode) {
+  document.documentElement.dataset.socialPreview = "true";
+}
 
 let width = 0;
 let height = 0;
@@ -490,4 +495,10 @@ window.addEventListener("resize", () => {
 });
 
 resize();
-timer(render);
+
+if (socialPreviewMode) {
+  window.__renderSocialPreviewFrame = render;
+  render(0);
+} else {
+  timer(render);
+}

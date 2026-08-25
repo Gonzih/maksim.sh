@@ -22,3 +22,16 @@ npm run dev
 npm run build
 npm run preview
 ```
+
+## Animated social preview
+
+The Open Graph card is a deterministic capture of the live topology. Regenerate
+the looping 1200×630 GIF on macOS with Google Chrome and FFmpeg installed:
+
+```sh
+npm run social:preview
+npm run social:validate
+```
+
+The GIF is the primary Open Graph and Twitter image. `public/og.png` remains the
+static fallback for crawlers that do not render animation.

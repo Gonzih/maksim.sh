@@ -7,10 +7,13 @@
     "dev": "vite",
     "knowledge:generate": "node scripts/generate-knowledge.mjs",
     "knowledge:validate": "node scripts/validate-knowledge.mjs",
-    "build": "npm run knowledge:generate && npm run knowledge:validate && vite build",
+    "social:preview": "node scripts/generate-social-preview.mjs",
+    "social:validate": "node scripts/validate-social-preview.mjs",
+    "build": "npm run knowledge:generate && npm run knowledge:validate && npm run social:validate && vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "playwright": "^1.62.1",
     "vite": "^7.1.2"
   },
   "dependencies": {

@@ -78,6 +78,10 @@ body::after {
   justify-content: flex-start;
 }
 
+html[data-social-preview="true"] .footer {
+  display: none;
+}
+
 .contact-links {
   display: flex;
   align-items: center;
