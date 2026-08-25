@@ -42,13 +42,14 @@ if (!png.subarray(0, 8).equals(pngSignature)) {
 
 const gifUrl = "https://maksim.sh/og-animated-v2.gif";
 const pngUrl = "https://maksim.sh/og.png";
-const gifPosition = html.indexOf(`<meta property="og:image" content="${gifUrl}">`);
-const pngPosition = html.indexOf(`<meta property="og:image" content="${pngUrl}">`);
+const ogImages = [...html.matchAll(/<meta property="og:image" content="([^"]+)">/g)]
+  .map((match) => match[1]);
 
-if (gifPosition < 0) fail("index.html does not declare the animated Open Graph image.");
-if (pngPosition < 0) fail("index.html does not declare the static Open Graph fallback.");
-if (gifPosition >= 0 && pngPosition >= 0 && gifPosition > pngPosition) {
-  fail("Animated Open Graph image must precede the static fallback.");
+if (ogImages.length !== 1 || ogImages[0] !== gifUrl) {
+  fail(`index.html must declare only the animated Open Graph image; received ${JSON.stringify(ogImages)}.`);
+}
+if (html.includes(`<meta property="og:image:secure_url" content="${pngUrl}">`)) {
+  fail("index.html must not declare the static PNG as another Open Graph image.");
 }
 if (!html.includes('<meta property="og:image:type" content="image/gif">')) {
   fail("index.html does not declare the Open Graph GIF media type.");
