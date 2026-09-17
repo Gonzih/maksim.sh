@@ -1,4 +1,11 @@
 :root {
+  /* Background ink, pulled from the ambient gradients so the ASCII layers sit
+     inside the existing violet/cyan scheme rather than beside it. */
+  --ascii-ink: rgba(150, 132, 255, 0.86);
+  --ascii-glow: rgba(132, 108, 255, 0.28);
+  --ascii-ink-cool: rgba(112, 214, 255, 0.82);
+  --ascii-glow-cool: rgba(98, 232, 255, 0.26);
+
   color-scheme: dark;
   background: #050508;
   color: #f3f4f1;
@@ -26,28 +33,60 @@ body {
     #050508;
 }
 
-body::after {
-  position: fixed;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  content: "";
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
-    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px);
-  background-size: 64px 64px;
-  -webkit-mask-image: radial-gradient(circle at center, black, transparent 82%);
-  mask-image: radial-gradient(circle at center, black, transparent 82%);
-  opacity: 0.42;
-}
-
+/* Host for the background modules; each module appends its own .layer. */
 #field {
   position: fixed;
   inset: 0;
   z-index: 0;
   display: block;
+  overflow: hidden;
+  margin: 0;
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.layer--canvas {
+  display: block;
   width: 100%;
   height: 100%;
+}
+
+.layer--ascii {
+  color: var(--ascii-ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: clamp(10px, 0.88vw, 14px);
+  font-weight: 400;
+  letter-spacing: 0;
+  /* Tight leading closes the gaps between rows so the ramp reads as a
+     continuous surface rather than scanlines. */
+  line-height: 1.15;
+  white-space: pre;
+  user-select: none;
+  -webkit-user-select: none;
+  text-shadow: 0 0 18px var(--ascii-glow);
+}
+
+.layer--rain {
+  color: var(--ascii-ink-cool);
+  text-shadow: 0 0 16px var(--ascii-glow-cool);
+}
+
+/* Field value drives hue as well as glyph: troughs sit deep violet, crests
+   run up to cyan, so a travelling wave carries its colour with it. */
+.layer--ascii .t0 { color: rgba(74, 58, 148, 0.55); }
+.layer--ascii .t1 { color: rgba(103, 78, 196, 0.68); }
+.layer--ascii .t2 { color: rgba(139, 108, 240, 0.8); }
+.layer--ascii .t3 { color: rgba(140, 150, 252, 0.88); }
+.layer--ascii .t4 { color: rgba(122, 199, 253, 0.94); }
+.layer--ascii .t5 {
+  color: rgba(142, 240, 255, 1);
+  text-shadow: 0 0 20px rgba(98, 232, 255, 0.5);
 }
 
 .vignette {
@@ -56,8 +95,8 @@ body::after {
   z-index: 1;
   pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(5, 5, 8, 0.58) 0%, transparent 38%, transparent 72%, rgba(5, 5, 8, 0.18) 100%),
-    radial-gradient(circle at center, transparent 38%, rgba(5, 5, 8, 0.46) 100%);
+    linear-gradient(90deg, rgba(5, 5, 8, 0.72) 0%, transparent 42%, transparent 74%, rgba(5, 5, 8, 0.32) 100%),
+    radial-gradient(circle at center, transparent 30%, rgba(5, 5, 8, 0.58) 100%);
 }
 
 .shell {
@@ -121,6 +160,13 @@ html[data-social-preview="true"] .role {
 .name > span {
   display: block;
   white-space: nowrap;
+}
+
+/* Per-character wrappers the shockwave displaces. inline-block is what makes
+   them transformable; will-change keeps the recoil off the main thread. */
+.name .letter {
+  display: inline-block;
+  will-change: transform;
 }
 
 .name .pair-space {
@@ -209,10 +255,6 @@ noscript {
 }
 
 @media (max-width: 720px) {
-  body::after {
-    background-size: 42px 42px;
-  }
-
   .shell {
     grid-template-rows: 1fr auto;
     padding:
@@ -246,6 +288,12 @@ noscript {
   .contact svg {
     width: 20px;
     height: 20px;
+  }
+
+  /* Fewer, larger cells on small screens keeps the grid cheap to rebuild. */
+  .layer--ascii {
+    font-size: 10px;
+    line-height: 1.2;
   }
 }
 
