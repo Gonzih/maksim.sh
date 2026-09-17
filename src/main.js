@@ -17,7 +17,6 @@ const pinned = parameters.has("bg") ? Number.parseInt(parameters.get("bg"), 10) 
 
 const director = createDirector(host, {
   reducedMotion: prefersReducedMotion.matches,
-  moduleDuration: prefersReducedMotion.matches ? 75_000 : 48_000,
   only: socialPreviewMode && pinned === null ? 0 : pinned,
 });
 
@@ -61,8 +60,9 @@ window.addEventListener("pointerdown", (event) => {
   director.addRipple(event.clientX, event.clientY, elapsed);
 });
 
-// Space skips to the next background. Ignored while a control has focus so it
-// never swallows the space a keyboard user meant for a link or button.
+// Space is the only way to change scene — nothing rotates on its own, so a
+// scene runs until the visitor asks for the next one. Ignored while a control
+// has focus, so it never swallows the space meant for a link or button.
 window.addEventListener("keydown", (event) => {
   if (event.code !== "Space" || event.metaKey || event.ctrlKey || event.altKey) return;
   if (event.target.closest("a, button, input, textarea, select, [contenteditable]")) return;

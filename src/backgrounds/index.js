@@ -8,6 +8,11 @@
  *
  * Modules are instantiated lazily and torn down once they rotate out, so only
  * the active pair ever holds memory or does work.
+ *
+ * Nothing rotates on a timer: one scene runs for as long as the visitor wants
+ * it, and only an explicit advance moves to the next. The order is shuffled
+ * per load, so which scene greets a visitor — and what follows it — differs
+ * between visits.
  */
 
 const LOADERS = [
@@ -17,16 +22,25 @@ const LOADERS = [
   () => import("./rain.js"),
 ];
 
+/** Fisher-Yates, so every ordering is equally likely. */
+function shuffled(items) {
+  const order = [...items];
+  for (let index = order.length - 1; index > 0; index -= 1) {
+    const swap = Math.floor(Math.random() * (index + 1));
+    [order[index], order[swap]] = [order[swap], order[index]];
+  }
+  return order;
+}
+
 export function createDirector(host, options = {}) {
   const {
-    moduleDuration = 48_000,
     crossfade = 1_600,
     reducedMotion = false,
     only = null,
   } = options;
 
   const loaders = only === null
-    ? LOADERS
+    ? shuffled(LOADERS)
     : [LOADERS[((only % LOADERS.length) + LOADERS.length) % LOADERS.length]];
 
   const instances = new Map();
@@ -123,11 +137,6 @@ export function createDirector(host, options = {}) {
 
     render(elapsed) {
       if (!current) return;
-
-      // Rotate once the active module has had its full turn.
-      if (loaders.length > 1 && elapsed - switchedAt > moduleDuration) {
-        advance(elapsed);
-      }
 
       if (previous) {
         const progress = (elapsed - switchedAt) / crossfade;
