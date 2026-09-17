@@ -1,5 +1,4 @@
 import { createDirector } from "./backgrounds/index.js";
-import { createLetterField } from "./letters.js";
 import "./styles.css";
 
 const host = document.querySelector("#field");
@@ -22,12 +21,6 @@ const director = createDirector(host, {
   only: socialPreviewMode && pinned === null ? 0 : pinned,
 });
 
-// The hero letters take the same shockwave the background does, so a click
-// reads as one impulse crossing the whole page.
-const letterField = createLetterField(document.querySelector("#name"), {
-  reducedMotion: prefersReducedMotion.matches,
-});
-
 // Floor imposed on every module when the visitor asked for reduced motion.
 const REDUCED_MOTION_INTERVAL = 1_000 / 12;
 
@@ -44,10 +37,7 @@ function loop(timestamp) {
     ? Math.max(REDUCED_MOTION_INTERVAL, director.frameInterval)
     : director.frameInterval;
 
-  // Letters settle on a spring, so they step every frame even when the active
-  // background is throttled — otherwise the recoil would visibly stair-step.
   elapsed = timestamp;
-  letterField.step(timestamp);
 
   if (interval > 0 && timestamp - lastFrameAt < interval) return;
   lastFrameAt = timestamp;
@@ -56,10 +46,7 @@ function loop(timestamp) {
 
 window.addEventListener("resize", () => {
   window.cancelAnimationFrame(resizeRequest);
-  resizeRequest = window.requestAnimationFrame(() => {
-    director.resize();
-    letterField.measure();
-  });
+  resizeRequest = window.requestAnimationFrame(() => director.resize());
 });
 
 window.addEventListener("pointermove", (event) => {
@@ -72,7 +59,6 @@ window.addEventListener("pointerleave", () => {
 
 window.addEventListener("pointerdown", (event) => {
   director.addRipple(event.clientX, event.clientY, elapsed);
-  letterField.push(event.clientX, event.clientY, elapsed);
 });
 
 // Space skips to the next background. Ignored while a control has focus so it

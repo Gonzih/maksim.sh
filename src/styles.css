@@ -162,13 +162,6 @@ html[data-social-preview="true"] .role {
   white-space: nowrap;
 }
 
-/* Per-character wrappers the shockwave displaces. inline-block is what makes
-   them transformable; will-change keeps the recoil off the main thread. */
-.name .letter {
-  display: inline-block;
-  will-change: transform;
-}
-
 .name .pair-space {
   display: inline-block;
   margin-left: 0.025em;

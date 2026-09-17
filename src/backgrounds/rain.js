@@ -1,18 +1,21 @@
 /**
  * Digital rain background module.
  *
- * Columns of glyphs fall at independent speeds. Each column keeps a head
- * position and a trail length; brightness falls off behind the head, and the
- * glyph in a cell is resampled occasionally so the stream shimmers rather
- * than scrolling a fixed string.
+ * Every glyph on screen is a drop — its own position, velocity and lifetime.
+ * Nothing is bound to a column, so a blast can throw drops anywhere and they
+ * keep falling from wherever they end up. New drops enter from above at a
+ * steady rate to keep the rain going; the population is capped, not fixed.
  */
 
 const GLYPHS = "01<>[]{}()/\\|=+*-:.#%$&@ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const SHADES = " .:-=+*#%@";
-/** Colour tiers the trail intensity is quantised into before it becomes a span. */
+/** Colour tiers a drop's brightness is quantised into before it becomes a span. */
 const TIERS = 6;
-/** How long a click shockwave takes to cross and settle, in milliseconds. */
-const STRIKE_LIFE = 1_800;
+/** Downward pull, in cells per second squared. */
+const GRAVITY = 12;
+/** How hard a blast throws a drop, and how far its reach extends in cells. */
+const BLAST_SPEED = 62;
+const BLAST_REACH = 26;
 
 function escapeHtml(text) {
   return text.replace(/[&<>]/g, (character) => (
@@ -20,14 +23,14 @@ function escapeHtml(text) {
   ));
 }
 
+function randomGlyph() {
+  return GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+}
+
 export const label = "rain";
 
 /** Character grids only change when a cell flips glyph. */
 export const frameInterval = 1_000 / 24;
-
-function randomGlyph() {
-  return GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
-}
 
 export function create(host, options = {}) {
   const { reducedMotion = false } = options;
@@ -41,11 +44,29 @@ export function create(host, options = {}) {
   let rows = 0;
   let cellWidth = 0;
   let cellHeight = 0;
-  let streams = [];
-  let glyphs = [];
+  let capacity = 0;
   let lastElapsed = 0;
+  let spawnDebt = 0;
+
+  const drops = [];
   const pointer = { column: 0, row: 0, active: false, energy: 0 };
-  const strikes = [];
+
+  function spawn(atTop) {
+    return {
+      column: Math.random() * columns,
+      // Stagger entry above the fold so the rain does not arrive as a band.
+      row: atTop ? -Math.random() * rows * 0.6 : Math.random() * rows,
+      velocityColumn: 0,
+      velocityRow: (reducedMotion ? 5 : 11) + Math.random() * (reducedMotion ? 4 : 15),
+      glyph: randomGlyph(),
+      brightness: 0.62 + Math.random() * 0.38,
+      // Each drop drags a tail of dimmer glyphs, which is what makes a moving
+      // point read as falling rain instead of a speck.
+      trail: 4 + Math.floor(Math.random() * 11),
+      // Drops thrown by a blast tumble and fade; falling rain does not.
+      thrown: 0,
+    };
+  }
 
   function measure() {
     const probe = document.createElement("span");
@@ -60,13 +81,9 @@ export function create(host, options = {}) {
     columns = Math.max(20, Math.ceil(element.clientWidth / cellWidth) + 1);
     rows = Math.max(12, Math.ceil(element.clientHeight / cellHeight));
 
-    streams = Array.from({ length: columns }, () => ({
-      head: Math.random() * -rows,
-      speed: (reducedMotion ? 3 : 7) + Math.random() * (reducedMotion ? 3 : 13),
-      trail: 6 + Math.floor(Math.random() * Math.max(6, rows * 0.55)),
-    }));
-
-    glyphs = Array.from({ length: columns * rows }, randomGlyph);
+    capacity = Math.round(columns * rows * (reducedMotion ? 0.06 : 0.16));
+    drops.length = 0;
+    for (let index = 0; index < capacity; index += 1) drops.push(spawn(false));
   }
 
   function render(elapsed) {
@@ -74,26 +91,71 @@ export function create(host, options = {}) {
 
     const delta = Math.min(0.12, Math.max(0, (elapsed - lastElapsed) / 1_000));
     lastElapsed = elapsed;
-
     pointer.energy += ((pointer.active ? 1 : 0) - pointer.energy) * 0.08;
 
-    for (const stream of streams) {
-      stream.head += stream.speed * delta;
-      if (stream.head - stream.trail > rows) {
-        stream.head = -Math.random() * rows * 0.5;
-        stream.speed = (reducedMotion ? 3 : 7) + Math.random() * (reducedMotion ? 3 : 13);
-        stream.trail = 6 + Math.floor(Math.random() * Math.max(6, rows * 0.55));
+    for (let index = drops.length - 1; index >= 0; index -= 1) {
+      const drop = drops[index];
+
+      // Thrown drops carry sideways momentum that air resistance bleeds off;
+      // gravity always wins in the end.
+      if (drop.thrown > 0) {
+        const drag = Math.exp(-1.6 * delta);
+        drop.velocityColumn *= drag;
+        drop.velocityRow = drop.velocityRow * drag + GRAVITY * delta;
+        drop.thrown = Math.max(0, drop.thrown - delta * 0.8);
+        if (Math.random() < delta * 5) drop.glyph = randomGlyph();
+      } else {
+        drop.velocityRow += GRAVITY * 0.12 * delta;
+      }
+
+      drop.column += drop.velocityColumn * delta;
+      drop.row += drop.velocityRow * delta;
+
+      // A drop that leaves the frame is gone. The rain is replenished from
+      // above, never by resurrecting what the blast cleared out.
+      if (drop.row > rows + 1 || drop.column < -2 || drop.column > columns + 2) {
+        drops.splice(index, 1);
       }
     }
 
-    // Resample a sparse set of cells each frame for the shimmer.
-    const churn = Math.max(1, Math.round(columns * rows * (reducedMotion ? 0.002 : 0.012)));
-    for (let n = 0; n < churn; n += 1) {
-      glyphs[Math.floor(Math.random() * glyphs.length)] = randomGlyph();
+    // Refill toward capacity from the top at a steady rate, so a cleared
+    // region fills back in as new rain falls into it rather than popping.
+    spawnDebt += (capacity - drops.length) * delta * (reducedMotion ? 0.6 : 1.5);
+    while (spawnDebt >= 1 && drops.length < capacity) {
+      drops.push(spawn(true));
+      spawnDebt -= 1;
     }
 
-    for (let index = strikes.length - 1; index >= 0; index -= 1) {
-      if (elapsed - strikes[index].startedAt > STRIKE_LIFE) strikes.splice(index, 1);
+    const cells = new Array(columns * rows);
+    const heat = new Float32Array(columns * rows);
+
+    for (const drop of drops) {
+      // Trail runs back along the drop's heading, so thrown drops streak the
+      // way they were flung rather than always pointing up.
+      const speed = Math.hypot(drop.velocityColumn * 0.5, drop.velocityRow) || 1;
+      const stepColumn = -(drop.velocityColumn / speed);
+      const stepRow = -(drop.velocityRow / speed);
+
+      for (let step = 0; step <= drop.trail; step += 1) {
+        const column = Math.round(drop.column + stepColumn * step);
+        const row = Math.round(drop.row + stepRow * step);
+        if (column < 0 || column >= columns || row < 0 || row >= rows) continue;
+
+        let value = drop.brightness * (1 - step / (drop.trail + 1)) ** 1.5;
+        if (step === 0) value = drop.brightness;
+        if (value <= 0.02) continue;
+
+        if (pointer.energy > 0.01) {
+          const distance = Math.hypot((column - pointer.column) * 0.5, row - pointer.row);
+          value += Math.max(0, 1 - distance / 9) ** 2 * pointer.energy * 0.5;
+        }
+
+        const cell = row * columns + column;
+        if (value > heat[cell]) {
+          heat[cell] = value;
+          cells[cell] = step === 0 ? drop.glyph : GLYPHS[(column * 31 + row * 17) % GLYPHS.length];
+        }
+      }
     }
 
     const lastShade = SHADES.length - 1;
@@ -108,57 +170,20 @@ export function create(host, options = {}) {
 
     for (let row = 0; row < rows; row += 1) {
       for (let column = 0; column < columns; column += 1) {
-        const stream = streams[column];
-        let displacedRow = row;
-        let boost = 0;
+        const cell = row * columns + column;
+        const value = heat[cell];
 
-        for (const strike of strikes) {
-          const age = (elapsed - strike.startedAt) / STRIKE_LIFE;
-          if (age >= 1) continue;
-
-          const deltaColumn = (column - strike.column) * 0.5;
-          const deltaRow = row - strike.row;
-          const distance = Math.hypot(deltaColumn, deltaRow) || 1e-4;
-          const front = age * rows * 0.95;
-          const band = Math.max(0, 1 - Math.abs(distance - front) / 4.5);
-          if (band <= 0.001) continue;
-
-          // Overshoot through zero so the columns spring back into place.
-          const recoil = Math.sin(age * Math.PI * 1.5) * (1 - age) ** 1.5;
-          displacedRow -= (deltaRow / distance) * band * recoil * 3.2;
-          boost += band * (1 - age) * 0.55;
-        }
-
-        const behind = stream.head - displacedRow;
-        let intensity = 0;
-
-        if (behind >= 0 && behind < stream.trail) {
-          // Bright at the head, tapering along the trail.
-          intensity = (1 - behind / stream.trail) ** 1.6;
-          if (behind < 1) intensity = 1;
-        }
-
-        if (pointer.energy > 0.01) {
-          const distance = Math.hypot(
-            (column - pointer.column) * 0.5,
-            row - pointer.row,
-          );
-          intensity += Math.max(0, 1 - distance / 9) ** 2 * pointer.energy * 0.5;
-        }
-
-        intensity += boost;
-
-        if (intensity <= 0.02) {
+        if (value <= 0.02) {
           run += " ";
           continue;
         }
 
-        // Near the head show a real glyph; further back fall back to shading
-        // so the trail dissolves into texture.
-        const glyph = intensity > 0.55
-          ? glyphs[row * columns + column]
-          : SHADES[Math.max(1, Math.round(Math.min(1, intensity * 1.7) * lastShade))];
-        const tier = Math.round(Math.min(1, intensity) * lastTier);
+        // Bright drops show their glyph; dim ones decay into shading so the
+        // field keeps its depth.
+        const glyph = value > 0.5
+          ? cells[cell]
+          : SHADES[Math.max(1, Math.round(Math.min(1, value * 1.9) * lastShade))];
+        const tier = Math.round(Math.min(1, value) * lastTier);
 
         if (tier !== runTier) {
           if (run) output += wrap(run, runTier);
@@ -205,8 +230,32 @@ export function create(host, options = {}) {
     },
     addRipple(clientX, clientY, elapsed) {
       if (reducedMotion) return;
-      const cell = toCell(clientX, clientY);
-      strikes.push({ column: cell.column, row: cell.row, startedAt: elapsed });
+      const origin = toCell(clientX, clientY);
+
+      // The blast shoves every drop within reach straight out of the way. It
+      // creates nothing: the cleared space stays empty until fresh rain falls
+      // into it from above.
+      for (const drop of drops) {
+        // Cells are about twice as tall as wide; measuring in that aspect
+        // keeps the blast circular on screen rather than an ellipse.
+        const deltaColumn = (drop.column - origin.column) * 0.5;
+        const deltaRow = drop.row - origin.row;
+        const distance = Math.hypot(deltaColumn, deltaRow);
+        if (distance > BLAST_REACH) continue;
+
+        const falloff = (1 - distance / BLAST_REACH) ** 1.6;
+        const speed = BLAST_SPEED * falloff;
+        // Drops right at the origin have no direction to be pushed in; give
+        // them a random one so the centre clears too.
+        const angle = distance < 0.5
+          ? Math.random() * Math.PI * 2
+          : Math.atan2(deltaRow, deltaColumn);
+
+        drop.velocityColumn += Math.cos(angle) * speed * 2;
+        drop.velocityRow += Math.sin(angle) * speed;
+        drop.thrown = Math.max(drop.thrown, falloff);
+        drop.brightness = Math.min(1, drop.brightness + falloff * 0.5);
+      }
     },
   };
 }
