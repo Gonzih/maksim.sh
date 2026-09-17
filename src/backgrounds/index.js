@@ -19,7 +19,7 @@ const LOADERS = [
 
 export function createDirector(host, options = {}) {
   const {
-    moduleDuration = 24_000,
+    moduleDuration = 48_000,
     crossfade = 1_600,
     reducedMotion = false,
     only = null,

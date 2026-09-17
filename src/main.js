@@ -17,7 +17,7 @@ const pinned = parameters.has("bg") ? Number.parseInt(parameters.get("bg"), 10) 
 
 const director = createDirector(host, {
   reducedMotion: prefersReducedMotion.matches,
-  moduleDuration: prefersReducedMotion.matches ? 40_000 : 24_000,
+  moduleDuration: prefersReducedMotion.matches ? 75_000 : 48_000,
   only: socialPreviewMode && pinned === null ? 0 : pinned,
 });
 
